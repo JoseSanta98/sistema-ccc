@@ -11,7 +11,7 @@ de evolución **sin cambiar comportamiento**.
 ---
 
 ## Objetivos
-- Reduccir el riesgo percibido al modificar el sistema
+- Reducir el riesgo percibido al modificar el sistema
 - Mejorar la comprensión estructural del código
 - Permitir refactors incrementales y reversibles
 - Mantener compatibilidad total con operación actual
@@ -27,13 +27,29 @@ de evolución **sin cambiar comportamiento**.
 
 ---
 
+## Semántica operativa del sistema (importante)
+El sistema CCC se utiliza en entorno industrial.  
+Por lo tanto, **los elementos visuales no son decoración**, sino
+**señales operativas para el operario**.
+
+Ejemplos de semántica visual:
+- Verde: correcto / listo / continuar
+- Rojo: peligro / stop / acción inválida
+- Amarillo: advertencia / atención / revisión
+- Azul: selección activa / contexto actual
+
+Cualquier cambio visual debe respetar esta semántica para evitar errores
+humanos en operación.
+
+---
+
 ## Arquitectura conceptual por capas (futura)
 
 ### 1. Presentación (UI)
 Responsabilidad:
 - Renderizado de pantallas
 - Captura de eventos
-- Feedback visual
+- Feedback visual al operario
 
 Archivos actuales:
 - main_ui.py
@@ -106,8 +122,61 @@ Archivo actual:
 - Lógica ZPL y envío a impresora
 - Esquema y estados de base de datos
 - Flujo operativo visible en planta
-- Estilo visual industrial vigente
+- Semántica visual industrial vigente
 - Formato actual de configuración
+
+---
+
+## Single Source of Truth (SSOT)
+
+### Estilos y apariencia visual
+`styles.py` es la **única fuente autorizada** de definición visual del sistema.
+
+Incluye:
+- Colores
+- Tipografías
+- Tamaños visuales
+- QSS global
+- Estados visuales (activo, abierto, cerrado, error)
+
+Reglas:
+- No se deben introducir valores visuales nuevos fuera de `styles.py`.
+- `setStyleSheet()` local está permitido **solo** si consume estilos definidos en `styles.py`.
+- No se permite hardcodear colores, fuentes o tamaños nuevos en archivos de UI.
+- Si un estilo no existe, se define primero en `styles.py`.
+
+Objetivo:
+- Evitar divergencia visual
+- Permitir cambios de diseño sin miedo
+- Mantener consistencia operativa
+
+---
+
+## Excepciones permitidas (importante)
+- Se permite el uso de `setStyleSheet()` local para:
+  - activar/desactivar estados
+  - mostrar errores temporales
+  - feedback inmediato de operación
+- Siempre que:
+  - no introduzca valores visuales nuevos
+  - consuma constantes o estilos de `styles.py`
+
+La deuda visual existente fuera de `styles.py` se considera **deuda conocida**
+y no se tratará como violación hasta refactor planificado.
+
+---
+
+## Archivos históricos / legacy
+Existen archivos que no forman parte del flujo activo del sistema, pero se
+conservan como referencia histórica.
+
+Ejemplo:
+- `numeros de productos en caja, hardware.py`
+
+Reglas:
+- Estos archivos no deben ser usados como base para nuevos cambios.
+- No representan el comportamiento actual del sistema.
+- Su presencia es documental, no operativa.
 
 ---
 
@@ -136,25 +205,3 @@ Este documento.
 ## Regla de oro
 Si un cambio no puede explicarse en una frase clara,
 entonces todavía no es seguro implementarlo.
-
-## Single Source of Truth (SSOT)
-
-### Estilos y apariencia visual
-`styles.py` es la **única fuente autorizada** de:
-
-- Colores
-- Tipografías
-- Tamaños visuales
-- QSS global
-- Estados visuales (activo, abierto, cerrado, error)
-
-Reglas:
-- Ningún archivo de UI debe hardcodear colores, fuentes o estilos.
-- No se deben usar `setStyleSheet()` locales con valores visuales nuevos.
-- Si un estilo no existe en `styles.py`, se agrega ahí primero.
-- `main_ui.py`, `admin_panel.py` y `dialogs.py` **consumen estilos**, no los definen.
-
-Objetivo:
-- Evitar divergencia visual
-- Permitir cambios de diseño sin miedo
-- Mantener consistencia operativa en planta
