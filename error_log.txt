@@ -1,0 +1,8 @@
+FALLO CRITICO AL CARGAR MODULOS:
+Traceback (most recent call last):
+  File "G:\Mi unidad\J\_Rastro T366\_SISTEMA CCC\Python\main.py", line 11, in <module>
+    from main_ui import MainUI
+  File "G:\Mi unidad\J\_Rastro T366\_SISTEMA CCC\Python\main_ui.py", line 238
+    r = self.table.currentRow(); if r < 0: return
+                                 ^^
+SyntaxError: invalid syntax
