@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos
+.venv/
+venv/
+
+# Bases de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+error_log.txt
+
+# Archivos comprimidos
+*.zip
+*.7z
+*.rar
+
+# Sistema
+.DS_Store
+Thumbs.db
