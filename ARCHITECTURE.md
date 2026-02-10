@@ -137,3 +137,24 @@ Este documento.
 Si un cambio no puede explicarse en una frase clara,
 entonces todavía no es seguro implementarlo.
 
+## Single Source of Truth (SSOT)
+
+### Estilos y apariencia visual
+`styles.py` es la **única fuente autorizada** de:
+
+- Colores
+- Tipografías
+- Tamaños visuales
+- QSS global
+- Estados visuales (activo, abierto, cerrado, error)
+
+Reglas:
+- Ningún archivo de UI debe hardcodear colores, fuentes o estilos.
+- No se deben usar `setStyleSheet()` locales con valores visuales nuevos.
+- Si un estilo no existe en `styles.py`, se agrega ahí primero.
+- `main_ui.py`, `admin_panel.py` y `dialogs.py` **consumen estilos**, no los definen.
+
+Objetivo:
+- Evitar divergencia visual
+- Permitir cambios de diseño sin miedo
+- Mantener consistencia operativa en planta
