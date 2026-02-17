@@ -17,6 +17,13 @@ import hardware
 # --- AJUSTE DE PRECISIÓN ---
 CORRECCION_MANUAL = -0.02
 
+
+def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
+    final_w = (raw_w + correccion_manual) if (aplicar_correccion and raw_w > 0.02) else raw_w
+    if final_w <= 0:
+        raise ValueError
+    return final_w
+
 class MainUI(QMainWindow):
     def __init__(self, config):
         super().__init__()
@@ -287,10 +294,7 @@ class MainUI(QMainWindow):
 
         try:
             raw_w = float(txt_w)
-            final_w = (raw_w + CORRECCION_MANUAL) if (self.chk_apply_corr.isChecked() and raw_w > 0.02) else raw_w
-            if final_w <= 0:
-                raise ValueError
-            return final_w
+            return calcular_peso_final(raw_w, self.chk_apply_corr.isChecked(), CORRECCION_MANUAL)
         except:
             QMessageBox.warning(self, "Peso", "Valor inválido.")
             return None
