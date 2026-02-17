@@ -277,20 +277,27 @@ class MainUI(QMainWindow):
             self.btn_print.setEnabled(False)
             self.txt_prod.selectAll()
 
-    def logic_save_print(self):
-        if not self.current_box or not self.current_product:
-            return
-        
+    def _calcular_peso_final(self):
         txt_w = self.txt_weight.text().strip()
         if not txt_w:
-            return
+            return None
 
         try:
             raw_w = float(txt_w)
             final_w = (raw_w + CORRECCION_MANUAL) if (self.chk_apply_corr.isChecked() and raw_w > 0.02) else raw_w
-            if final_w <= 0: raise ValueError
+            if final_w <= 0:
+                raise ValueError
+            return final_w
         except:
             QMessageBox.warning(self, "Peso", "Valor inválido.")
+            return None
+
+    def logic_save_print(self):
+        if not self.current_box or not self.current_product:
+            return
+
+        final_w = self._calcular_peso_final()
+        if final_w is None:
             return
 
         consec, pid = self.db.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
