@@ -317,7 +317,8 @@ class AdminPanel(QDialog):
             self.tbl_p.setItem(r, 2, QTableWidgetItem(f"{p['peso']:.2f}"))
             self.tbl_p.setItem(r, 3, QTableWidgetItem(p['hora']))
             
-        self.btn_toggle_box.setText("🔒 CERRAR" if is_open else "🔓 REABRIR")
+        self.btn_toggle_box.setText("🔓 REABRIR")
+        self.btn_toggle_box.setEnabled(not is_open)
         self.btn_print_master.setVisible(not is_open)
         self.detail_stack.setCurrentIndex(2)
 
@@ -354,11 +355,13 @@ class AdminPanel(QDialog):
 
     def action_toggle_box(self):
         bid = self.current_box_data['id']
-        if puede_cerrar_caja(self.current_box_data['estado']):
-            self.db.cerrar_caja(bid)
-        else:
+
+        if puede_reabrir_caja(self.current_box_data['estado']):
             reabrir_caja(self.db, self.current_box_data)
-        self.load_tree_data(); self.data_changed.emit(); self.show_box_details()
+
+        self.load_tree_data()
+        self.data_changed.emit()
+        self.show_box_details()
 
     def action_delete_box(self):
         if QMessageBox.critical(self, "Eliminar", "¿Borrar caja?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
