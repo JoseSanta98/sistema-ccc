@@ -21,7 +21,7 @@ from box_domain import (
 from box_service import cerrar_caja
 import styles 
 import hardware
-from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError
+from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError, resolver_peso_cierre
 
 
 class MainUI(QMainWindow):
@@ -360,7 +360,22 @@ class MainUI(QMainWindow):
         peso_calc = calcular_peso_caja(cont)
         peso_f, ok = QInputDialog.getDouble(self, "Peso Final", f"Suma: {peso_calc:.2f} Kg", value=peso_calc, minValue=0.1, maxValue=20.0, decimals=2)
         if ok:
-            self._ejecutar_cierre_caja(peso_f, cont)
+            try:
+                resultado = resolver_peso_cierre(peso_calc, peso_f)
+            except PesoInvalidoError as e:
+                QMessageBox.warning(self, "Error de peso", str(e))
+                return
+
+            peso_final = resultado["peso_final"]
+
+            if resultado["hay_diferencia"]:
+                QMessageBox.warning(
+                    self,
+                    "Advertencia",
+                    f"El peso final difiere de la suma calculada por {resultado['delta']:.2f} kg"
+                )
+
+            self._ejecutar_cierre_caja(peso_final, cont)
             self.current_box = None
             self.refresh_context()
 
