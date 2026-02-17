@@ -16,6 +16,8 @@ import hardware
 
 # --- AJUSTE DE PRECISIÓN ---
 CORRECCION_MANUAL = -0.02
+ESTADO_ABIERTA = "ABIERTA"
+ESTADO_CERRADA = "CERRADA"
 
 
 def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
@@ -23,6 +25,10 @@ def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
     if final_w <= 0:
         raise ValueError
     return final_w
+
+
+def puede_agregar_pieza(estado_caja):
+    return estado_caja == ESTADO_ABIERTA
 
 class MainUI(QMainWindow):
     def __init__(self, config):
@@ -311,6 +317,9 @@ class MainUI(QMainWindow):
 
         final_w = self._calcular_peso_final()
         if final_w is None:
+            return
+
+        if not puede_agregar_pieza(self.current_box['estado']):
             return
 
         self._registrar_e_imprimir(final_w)
