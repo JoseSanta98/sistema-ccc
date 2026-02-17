@@ -16,22 +16,12 @@ from box_domain import (
     ESTADO_CERRADA,
     puede_agregar_pieza,
     puede_cerrar_caja,
-    puede_reabrir_caja,
-    calcular_peso_caja
+    puede_reabrir_caja
 )
 from box_service import cerrar_caja
 import styles 
 import hardware
-
-# --- AJUSTE DE PRECISIÓN ---
-CORRECCION_MANUAL = -0.02
-
-
-def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
-    final_w = (raw_w + correccion_manual) if (aplicar_correccion and raw_w > 0.02) else raw_w
-    if final_w <= 0:
-        raise ValueError
-    return final_w
+from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError
 
 
 class MainUI(QMainWindow):
@@ -303,11 +293,20 @@ class MainUI(QMainWindow):
             return None
 
         try:
-            raw_w = float(txt_w)
-            return calcular_peso_final(raw_w, self.chk_apply_corr.isChecked(), CORRECCION_MANUAL)
-        except:
+            raw_weight = float(txt_w)
+        except ValueError:
             QMessageBox.warning(self, "Peso", "Valor inválido.")
             return None
+
+        aplicar_correccion_checkbox = self.chk_apply_corr.isChecked()
+
+        try:
+            peso_final = calcular_peso_pieza(raw_weight, aplicar_correccion_checkbox)
+        except PesoInvalidoError as e:
+            QMessageBox.warning(self, "Error de peso", str(e))
+            return None
+
+        return peso_final
 
     def _registrar_e_imprimir(self, final_w):
         consec, pid = self.db.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
