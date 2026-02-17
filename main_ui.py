@@ -34,6 +34,10 @@ def puede_agregar_pieza(estado_caja):
 def puede_cerrar_caja(estado_caja):
     return estado_caja == ESTADO_ABIERTA
 
+
+def calcular_peso_caja(contenido):
+    return sum(p['peso'] for p in contenido)
+
 class MainUI(QMainWindow):
     def __init__(self, config):
         super().__init__()
@@ -355,7 +359,7 @@ class MainUI(QMainWindow):
             return
         cont = self.db.get_contenido_caja(self.current_box['id'])
         if not cont: return
-        peso_calc = sum(p['peso'] for p in cont)
+        peso_calc = calcular_peso_caja(cont)
         peso_f, ok = QInputDialog.getDouble(self, "Peso Final", f"Suma: {peso_calc:.2f} Kg", value=peso_calc, minValue=0.1, maxValue=20.0, decimals=2)
         if ok:
             self.hw_mgr.print_master(self.current_box, self.current_canal, cont, peso_manual_override=peso_f)
