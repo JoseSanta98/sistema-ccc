@@ -15,6 +15,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
+from box_service import reabrir_caja
 
 # --- ESTILOS "HEAVY INDUSTRY" PARA ADMIN ---
 ADMIN_STYLE = """
@@ -344,7 +345,7 @@ class AdminPanel(QDialog):
         box_fresh = self.db.get_caja_by_id(bid)
         if puede_reabrir_caja(box_fresh['estado']):
             if QMessageBox.question(self, "Reabrir", "¿Reabrir caja?") == QMessageBox.Yes:
-                self.db.reabrir_caja(bid)
+                reabrir_caja(self.db, box_fresh)
                 box_fresh = self.db.get_caja_by_id(bid)
             else: return
         self.box_to_open_in_main = box_fresh
@@ -356,7 +357,7 @@ class AdminPanel(QDialog):
         if puede_cerrar_caja(self.current_box_data['estado']):
             self.db.cerrar_caja(bid)
         else:
-            self.db.reabrir_caja(bid)
+            reabrir_caja(self.db, self.current_box_data)
         self.load_tree_data(); self.data_changed.emit(); self.show_box_details()
 
     def action_delete_box(self):

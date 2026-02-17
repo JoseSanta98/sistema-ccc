@@ -19,6 +19,7 @@ from box_domain import (
     puede_reabrir_caja,
     calcular_peso_caja
 )
+from box_service import cerrar_caja
 import styles 
 import hardware
 
@@ -349,8 +350,7 @@ class MainUI(QMainWindow):
                 self.txt_prod.setFocus()
 
     def _ejecutar_cierre_caja(self, peso_final, contenido):
-        self.hw_mgr.print_master(self.current_box, self.current_canal, contenido, peso_manual_override=peso_final)
-        self.db.cerrar_caja(self.current_box['id'])
+        cerrar_caja(self.db, self.hw_mgr, self.current_box, self.current_canal, contenido, peso_final)
 
     def logic_close_box(self):
         if not self.current_box: return
