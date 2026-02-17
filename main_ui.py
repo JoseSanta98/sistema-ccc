@@ -324,11 +324,11 @@ class MainUI(QMainWindow):
 
         self._registrar_e_imprimir(final_w)
 
+        self.current_box = self.db.get_caja_by_id(self.current_box['id'])
+
         self.last_activity = datetime.datetime.now()
         self.refresh_table()
         self.update_stats()
-        
-        self.current_box = self.db.get_caja_by_id(self.current_box['id'])
         self.highlight_buttons(self.current_box['numero_caja'])
 
         if self.scale_active:
