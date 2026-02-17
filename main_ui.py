@@ -30,6 +30,10 @@ def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
 def puede_agregar_pieza(estado_caja):
     return estado_caja == ESTADO_ABIERTA
 
+
+def puede_cerrar_caja(estado_caja):
+    return estado_caja == ESTADO_ABIERTA
+
 class MainUI(QMainWindow):
     def __init__(self, config):
         super().__init__()
@@ -347,6 +351,8 @@ class MainUI(QMainWindow):
 
     def logic_close_box(self):
         if not self.current_box: return
+        if not puede_cerrar_caja(self.current_box['estado']):
+            return
         cont = self.db.get_contenido_caja(self.current_box['id'])
         if not cont: return
         peso_calc = sum(p['peso'] for p in cont)
