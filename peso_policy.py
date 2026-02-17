@@ -8,6 +8,7 @@ class PesoConfig:
     MAX_CIERRE = 100.00
     DECIMALES = 2
     TOLERANCIA_CIERRE = 0.05
+    PORCENTAJE_BLOQUEO = 0.07
 
 def _redondear(valor: float) -> float:
     return round(valor, PesoConfig.DECIMALES)
@@ -35,6 +36,8 @@ def calcular_peso_caja(piezas: list[dict]) -> float:
     return _redondear(total)
 
 def resolver_peso_cierre(peso_calculado: float, peso_override: float | None):
+    peso_calculado = _redondear(peso_calculado)
+
     if peso_override is not None:
         if peso_override <= 0:
             raise PesoInvalidoError(f"Override de cierre inválido: {peso_override}")
@@ -44,10 +47,22 @@ def resolver_peso_cierre(peso_calculado: float, peso_override: float | None):
 
         peso_final = _redondear(peso_override)
     else:
-        peso_final = _redondear(peso_calculado)
+        peso_final = peso_calculado
 
-    delta = peso_final - _redondear(peso_calculado)
-    hay_diferencia = abs(delta) > PesoConfig.TOLERANCIA_CIERRE
+    delta = peso_final - peso_calculado
+    abs_delta = abs(delta)
+
+    # Nivel 1: Bloqueo porcentual
+    if peso_calculado > 0:
+        limite_bloqueo = peso_calculado * PesoConfig.PORCENTAJE_BLOQUEO
+        if abs_delta > limite_bloqueo:
+            raise PesoInvalidoError(
+                f"Diferencia excesiva ({abs_delta:.2f} kg). "
+                f"Supera el {PesoConfig.PORCENTAJE_BLOQUEO*100:.0f}% permitido."
+            )
+
+    # Nivel 2: Advertencia
+    hay_diferencia = abs_delta > PesoConfig.TOLERANCIA_CIERRE
 
     return {
         "peso_final": peso_final,
