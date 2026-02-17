@@ -15,7 +15,13 @@ def cerrar_caja(db, hw_mgr, caja, canal, contenido, peso_final):
 
     peso_final_validado = resultado["peso_final"]
 
-    hw_mgr.print_master(caja, canal, contenido, peso_manual_override=peso_final_validado)
+    hw_mgr.print_master(
+        caja,
+        canal,
+        contenido,
+        peso_manual_override=peso_final_validado
+    )
+
     db.cerrar_caja(caja['id'])
     return True
 
