@@ -353,6 +353,10 @@ class MainUI(QMainWindow):
                 self.btn_print.setEnabled(False)
                 self.txt_prod.setFocus()
 
+    def _ejecutar_cierre_caja(self, peso_final, contenido):
+        self.hw_mgr.print_master(self.current_box, self.current_canal, contenido, peso_manual_override=peso_final)
+        self.db.cerrar_caja(self.current_box['id'])
+
     def logic_close_box(self):
         if not self.current_box: return
         if not puede_cerrar_caja(self.current_box['estado']):
@@ -362,8 +366,7 @@ class MainUI(QMainWindow):
         peso_calc = calcular_peso_caja(cont)
         peso_f, ok = QInputDialog.getDouble(self, "Peso Final", f"Suma: {peso_calc:.2f} Kg", value=peso_calc, minValue=0.1, maxValue=20.0, decimals=2)
         if ok:
-            self.hw_mgr.print_master(self.current_box, self.current_canal, cont, peso_manual_override=peso_f)
-            self.db.cerrar_caja(self.current_box['id'])
+            self._ejecutar_cierre_caja(peso_f, cont)
             self.current_box = None
             self.refresh_context()
 
