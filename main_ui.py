@@ -258,11 +258,14 @@ class MainUI(QMainWindow):
     # =========================================================================
     # FLUJO OPERATIVO
     # =========================================================================
+    def _buscar_producto(self, code):
+        return self.db.get_producto(code)
+
     def logic_validate_product(self):
         code = self.txt_prod.text().strip()
         if not code:
             return
-        p = self.db.get_producto(code)
+        p = self._buscar_producto(code)
         if p:
             self.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
