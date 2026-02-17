@@ -9,6 +9,12 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QFont, QGuiApplication
 
 import hardware 
+from box_domain import (
+    ESTADO_ABIERTA,
+    ESTADO_CERRADA,
+    puede_cerrar_caja,
+    puede_reabrir_caja
+)
 
 # --- ESTILOS "HEAVY INDUSTRY" PARA ADMIN ---
 ADMIN_STYLE = """
@@ -198,7 +204,7 @@ class AdminPanel(QDialog):
             cajas = self.db.get_all_cajas_canal(c['id'], incluir_cerradas=True)
             for b in cajas:
                 item_b = QTreeWidgetItem(item_c)
-                st = "📦" if b['estado'] == 'ABIERTA' else "🔒"
+                st = "📦" if puede_cerrar_caja(b['estado']) else "🔒"
                 item_b.setText(0, f"    {st} Caja #{b['numero_caja']} ({b['num_piezas']})")
                 item_b.setData(0, Qt.UserRole, {'type': 'caja', 'id': b['id'], 'pid': c['id']})
         self.tree.expandAll()
@@ -290,7 +296,7 @@ class AdminPanel(QDialog):
         b = self.db.get_caja_by_id(bid) 
         self.current_box_data = b 
         self.lbl_b_title.setText(f"CAJA #{b['numero_caja']}")
-        is_open = (b['estado'] == 'ABIERTA')
+        is_open = puede_cerrar_caja(b['estado'])
         
         self.lbl_b_badge.setText(b['estado'])
         self.lbl_b_badge.setObjectName("BadgeOpen" if is_open else "BadgeClosed")
@@ -336,7 +342,7 @@ class AdminPanel(QDialog):
     def action_jump_prod(self):
         bid = self.current_box_data['id']
         box_fresh = self.db.get_caja_by_id(bid)
-        if box_fresh['estado'] == 'CERRADA':
+        if puede_reabrir_caja(box_fresh['estado']):
             if QMessageBox.question(self, "Reabrir", "¿Reabrir caja?") == QMessageBox.Yes:
                 self.db.reabrir_caja(bid)
                 box_fresh = self.db.get_caja_by_id(bid)
@@ -347,8 +353,10 @@ class AdminPanel(QDialog):
 
     def action_toggle_box(self):
         bid = self.current_box_data['id']
-        if self.current_box_data['estado'] == 'ABIERTA': self.db.cerrar_caja(bid)
-        else: self.db.reabrir_caja(bid)
+        if puede_cerrar_caja(self.current_box_data['estado']):
+            self.db.cerrar_caja(bid)
+        else:
+            self.db.reabrir_caja(bid)
         self.load_tree_data(); self.data_changed.emit(); self.show_box_details()
 
     def action_delete_box(self):
