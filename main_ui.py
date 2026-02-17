@@ -11,13 +11,19 @@ from PySide6.QtCore import Qt, QTimer
 from db_manager import DatabaseManager
 from dialogs import SiniigaSelectorDialog, BoxSelectorDialog
 from admin_panel import AdminPanel
+from box_domain import (
+    ESTADO_ABIERTA,
+    ESTADO_CERRADA,
+    puede_agregar_pieza,
+    puede_cerrar_caja,
+    puede_reabrir_caja,
+    calcular_peso_caja
+)
 import styles 
 import hardware
 
 # --- AJUSTE DE PRECISIÓN ---
 CORRECCION_MANUAL = -0.02
-ESTADO_ABIERTA = "ABIERTA"
-ESTADO_CERRADA = "CERRADA"
 
 
 def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
@@ -26,21 +32,6 @@ def calcular_peso_final(raw_w, aplicar_correccion, correccion_manual):
         raise ValueError
     return final_w
 
-
-def puede_agregar_pieza(estado_caja):
-    return estado_caja == ESTADO_ABIERTA
-
-
-def puede_cerrar_caja(estado_caja):
-    return estado_caja == ESTADO_ABIERTA
-
-
-def puede_reabrir_caja(estado_caja):
-    return estado_caja == ESTADO_CERRADA
-
-
-def calcular_peso_caja(contenido):
-    return sum(p['peso'] for p in contenido)
 
 class MainUI(QMainWindow):
     def __init__(self, config):
