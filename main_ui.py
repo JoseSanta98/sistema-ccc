@@ -295,6 +295,12 @@ class MainUI(QMainWindow):
             QMessageBox.warning(self, "Peso", "Valor inválido.")
             return None
 
+    def _registrar_e_imprimir(self, final_w):
+        consec, pid = self.db.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
+        full = self.db.get_pieza_by_id(pid)
+        ok, msg = self.hw_mgr.print_ticket(full, self.current_box, self.current_canal, self.current_product)
+        if not ok: QMessageBox.critical(self, "Impresora", msg)
+
     def logic_save_print(self):
         if not self.current_box or not self.current_product:
             return
@@ -303,10 +309,7 @@ class MainUI(QMainWindow):
         if final_w is None:
             return
 
-        consec, pid = self.db.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
-        full = self.db.get_pieza_by_id(pid)
-        ok, msg = self.hw_mgr.print_ticket(full, self.current_box, self.current_canal, self.current_product)
-        if not ok: QMessageBox.critical(self, "Impresora", msg)
+        self._registrar_e_imprimir(final_w)
 
         self.last_activity = datetime.datetime.now()
         self.refresh_table()
