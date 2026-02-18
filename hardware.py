@@ -193,15 +193,13 @@ class HardwareManager:
         return self.send_raw_zpl(zpl)
 
     def print_master(self, caja_data, canal_data, contenido_piezas, peso_manual_override=None):
+        if peso_manual_override is None:
+            raise ValueError("peso_manual_override no puede ser None")
+
         empresa = "CENTRAL COMERCIALIZADORA DE CARNES SA DE CV"
         fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
 
-        peso_calculado = sum(p["peso"] for p in contenido_piezas)
-        peso_final = (
-            peso_manual_override
-            if peso_manual_override and peso_manual_override > 0
-            else peso_calculado
-        )
+        peso_final = peso_manual_override
 
         piezas = len(contenido_piezas)
         siniiga_display = canal_data["siniiga"].split("-")[0]
