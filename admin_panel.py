@@ -493,9 +493,17 @@ class AdminPanel(QDialog):
         prods = self.product_service.list_all(include_inactive=True)
         for p in prods:
             r = self.tbl_cat.rowCount(); self.tbl_cat.insertRow(r)
-            self.tbl_cat.setItem(r,0, QTableWidgetItem(str(p['codigo'])))
-            self.tbl_cat.setItem(r,1, QTableWidgetItem(p['nombre']))
-            self.tbl_cat.setItem(r,2, QTableWidgetItem(p['especie']))
+            code_item = QTableWidgetItem(str(p['codigo']))
+            name_item = QTableWidgetItem(p['nombre'])
+            especie_item = QTableWidgetItem(p['especie'])
+
+            self.tbl_cat.setItem(r, 0, code_item)
+            self.tbl_cat.setItem(r, 1, name_item)
+            self.tbl_cat.setItem(r, 2, especie_item)
+
+            if p.get('estado') == 'INACTIVO':
+                for item in (code_item, name_item, especie_item):
+                    item.setForeground(QColor("#777777"))
 
     def on_cat_select(self):
         r = self.tbl_cat.currentRow()
