@@ -19,6 +19,7 @@ from box_domain import (
     puede_reabrir_caja
 )
 from box_service import cerrar_caja
+from piece_service import PieceService
 import styles 
 import hardware
 from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError, resolver_peso_cierre
@@ -33,6 +34,7 @@ class MainUI(QMainWindow):
         self.setStyleSheet(styles.MAIN_STYLESHEET)
         
         self.db = DatabaseManager()
+        self.piece_service = PieceService(self.db)
         self.hw_mgr = hardware.HardwareManager(config.get('HARDWARE', 'PRINTER_NAME', fallback='ZDesigner'))
         
         self.current_canal = None
@@ -309,7 +311,7 @@ class MainUI(QMainWindow):
         return peso_final
 
     def _registrar_e_imprimir(self, final_w):
-        consec, pid = self.db.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
+        consec, pid = self.piece_service.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
         full = self.db.get_pieza_by_id(pid)
         ok, msg = self.hw_mgr.print_ticket(full, self.current_box, self.current_canal, self.current_product)
         if not ok: QMessageBox.critical(self, "Impresora", msg)
