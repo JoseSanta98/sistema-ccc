@@ -5,10 +5,13 @@ from datetime import datetime
 
 DB_FILE = "produccion_local.db"
 SCHEMA_FILE = "schema.sql"
+MIGRATIONS_DIR = os.path.join("tools", "migrations")
+PRODUCTOS_ESTADO_MIGRATION = "001_add_estado_to_productos.sql"
 
 class DatabaseManager:
     def __init__(self):
         self._ensure_db_exists()
+        self._run_pending_migrations()
 
     def _get_conn(self):
         conn = sqlite3.connect(DB_FILE)
@@ -31,6 +34,37 @@ class DatabaseManager:
             print("✅ Estructura de base de datos creada exitosamente.")
         else:
             print("❌ Error: No se encuentra schema.sql")
+
+    def _run_pending_migrations(self):
+        conn = self._get_conn()
+        try:
+            if not self._table_exists(conn, "productos"):
+                return
+
+            if self._column_exists(conn, "productos", "estado"):
+                return
+
+            migration_path = os.path.join(MIGRATIONS_DIR, PRODUCTOS_ESTADO_MIGRATION)
+            if not os.path.exists(migration_path):
+                print(f"❌ Error: No se encuentra migración {migration_path}")
+                return
+
+            with open(migration_path, "r", encoding="utf-8") as f:
+                script = f.read()
+
+            conn.executescript(script)
+            conn.commit()
+            print("✅ Migración aplicada: productos.estado agregado con valor por defecto ACTIVO.")
+        finally:
+            conn.close()
+
+    def _table_exists(self, conn, table_name):
+        row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)).fetchone()
+        return row is not None
+
+    def _column_exists(self, conn, table_name, column_name):
+        rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        return any(row[1] == column_name for row in rows)
 
     # --- 1. PRODUCTOS ---
     def get_producto(self, codigo):
