@@ -16,6 +16,7 @@ from box_domain import (
     puede_reabrir_caja
 )
 from box_service import reabrir_caja
+from piece_service import PieceService
 
 # --- ESTILOS "HEAVY INDUSTRY" PARA ADMIN ---
 ADMIN_STYLE = """
@@ -115,6 +116,7 @@ class AdminPanel(QDialog):
     def __init__(self, db_manager, parent=None):
         super().__init__(parent)
         self.db = db_manager
+        self.piece_service = PieceService(self.db)
         self.hw = hardware.HardwareManager() 
         
         self.box_to_open_in_main = None
