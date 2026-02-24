@@ -270,6 +270,12 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
+    def cerrar_caja_conn(self, conn, caja_id):
+        conn.execute(
+            "UPDATE cajas SET estado='CERRADA', fecha_cierre=CURRENT_TIMESTAMP WHERE id=?",
+            (caja_id,)
+        )
+
     def reabrir_caja(self, caja_id):
         conn = self._get_conn()
         conn.execute("UPDATE cajas SET estado='ABIERTA', fecha_cierre=NULL WHERE id=?", (caja_id,))
