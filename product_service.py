@@ -2,20 +2,8 @@ class ProductService:
     def __init__(self, db_manager):
         self.db = db_manager
 
-    def list_all(self, include_inactive=True):
-        conn = self.db._get_conn()
-        try:
-            if include_inactive:
-                rows = conn.execute("SELECT * FROM productos ORDER BY codigo ASC").fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM productos WHERE estado='ACTIVO' ORDER BY codigo ASC"
-                ).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
-
-    def get(self, codigo):
+    # --- API NUEVA SOLICITADA ---
+    def get_producto(self, codigo):
         codigo_limpio = self._validar_codigo(codigo)
         conn = self.db._get_conn()
         try:
@@ -25,6 +13,65 @@ class ProductService:
             return dict(row) if row else None
         finally:
             conn.close()
+
+    def get_producto_activo(self, codigo):
+        codigo_limpio = self._validar_codigo(codigo)
+        conn = self.db._get_conn()
+        try:
+            row = conn.execute(
+                "SELECT * FROM productos WHERE codigo=? AND estado='ACTIVO'",
+                (codigo_limpio,),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def get_all_productos(self, incluir_inactivos=False):
+        conn = self.db._get_conn()
+        try:
+            if incluir_inactivos:
+                rows = conn.execute("SELECT * FROM productos ORDER BY codigo ASC").fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM productos WHERE estado='ACTIVO' ORDER BY codigo ASC"
+                ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    def upsert_producto(self, codigo, nombre, especie):
+        codigo_limpio = self._validar_codigo(codigo)
+        nombre_limpio = self._validar_texto(nombre, "nombre")
+        especie_limpia = self._validar_texto(especie, "especie")
+
+        conn = self.db._get_conn()
+        try:
+            conn.execute(
+                """
+                INSERT INTO productos (codigo, nombre, especie, estado)
+                VALUES (?, ?, ?, 'ACTIVO')
+                ON CONFLICT(codigo) DO UPDATE SET
+                    nombre=excluded.nombre,
+                    especie=excluded.especie
+                """,
+                (codigo_limpio, nombre_limpio, especie_limpia),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def desactivar_producto(self, codigo):
+        self._set_estado(codigo, "INACTIVO")
+
+    def activar_producto(self, codigo):
+        self._set_estado(codigo, "ACTIVO")
+
+    # --- COMPATIBILIDAD CON CÓDIGO ACTUAL ---
+    def list_all(self, include_inactive=True):
+        return self.get_all_productos(incluir_inactivos=include_inactive)
+
+    def get(self, codigo):
+        return self.get_producto(codigo)
 
     def create(self, codigo, nombre, especie):
         codigo_limpio = self._validar_codigo(codigo)
@@ -104,10 +151,10 @@ class ProductService:
             conn.close()
 
     def deactivate(self, codigo):
-        self._set_estado(codigo, "INACTIVO")
+        self.desactivar_producto(codigo)
 
     def reactivate(self, codigo):
-        self._set_estado(codigo, "ACTIVO")
+        self.activar_producto(codigo)
 
     def delete_if_unused(self, codigo):
         codigo_limpio = self._validar_codigo(codigo)
@@ -138,19 +185,8 @@ class ProductService:
 
         conn = self.db._get_conn()
         try:
-            conn.execute("BEGIN IMMEDIATE")
-
-            if not self._existe_producto_conn(conn, codigo_limpio):
-                raise ValueError(f"El producto '{codigo_limpio}' no existe")
-
-            conn.execute(
-                "UPDATE productos SET estado=? WHERE codigo=?",
-                (estado_objetivo, codigo_limpio),
-            )
+            conn.execute("UPDATE productos SET estado=? WHERE codigo=?", (estado_objetivo, codigo_limpio))
             conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
         finally:
             conn.close()
 
