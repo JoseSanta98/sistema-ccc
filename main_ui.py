@@ -19,6 +19,7 @@ from box_domain import (
     puede_reabrir_caja
 )
 from box_service import cerrar_caja
+from product_service import ProductService
 from piece_service import PieceService
 import styles 
 import hardware
@@ -34,7 +35,8 @@ class MainUI(QMainWindow):
         self.setStyleSheet(styles.MAIN_STYLESHEET)
         
         self.db = DatabaseManager()
-        self.piece_service = PieceService(self.db)
+        self.product_service = ProductService(self.db)
+        self.piece_service = PieceService(self.db, self.product_service)
         self.hw_mgr = hardware.HardwareManager(config.get('HARDWARE', 'PRINTER_NAME', fallback='ZDesigner'))
         
         self.current_canal = None
@@ -268,20 +270,13 @@ class MainUI(QMainWindow):
     # FLUJO OPERATIVO
     # =========================================================================
     def _buscar_producto(self, code):
-        return self.db.get_producto(code)
+        return self.product_service.get_producto_activo(code)
 
     def logic_validate_product(self):
         code = self.txt_prod.text().strip()
         if not code:
             return
         p = self._buscar_producto(code)
-        if p and p.get('estado') == 'INACTIVO':
-            self.current_product = None
-            self.lbl_prod_name.setText("PRODUCTO INACTIVO")
-            self.lbl_prod_name.setStyleSheet("color: #cc0000;")
-            self.btn_print.setEnabled(False)
-            self.txt_prod.selectAll()
-            return
         if p:
             self.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
@@ -292,7 +287,12 @@ class MainUI(QMainWindow):
                 self.txt_weight.clear()
         else:
             self.current_product = None
-            self.lbl_prod_name.setText("NO ENCONTRADO")
+            prod_inactivo = self.product_service.get_producto(code)
+            if prod_inactivo and prod_inactivo.get('estado') == 'INACTIVO':
+                self.lbl_prod_name.setText("PRODUCTO INACTIVO")
+                self.lbl_prod_name.setStyleSheet("color: #cc0000;")
+            else:
+                self.lbl_prod_name.setText("NO ENCONTRADO")
             self.btn_print.setEnabled(False)
             self.txt_prod.selectAll()
 
@@ -334,7 +334,11 @@ class MainUI(QMainWindow):
         if not puede_agregar_pieza(self.current_box['estado']):
             return
 
-        self._registrar_e_imprimir(final_w)
+        try:
+            self._registrar_e_imprimir(final_w)
+        except ValueError as e:
+            QMessageBox.warning(self, "Error", str(e))
+            return
 
         self.current_box = self.db.get_caja_by_id(self.current_box['id'])
 
