@@ -1,3 +1,5 @@
+import sqlite3
+
 from box_domain import puede_cerrar_caja, puede_reabrir_caja
 from peso_policy import calcular_peso_caja, resolver_peso_cierre, PesoInvalidoError
 
@@ -41,6 +43,40 @@ class BoxService:
             raise RuntimeError("Error de impresión, caja reabierta") from exc
 
         return True
+
+    def crear_o_recuperar_caja(self, canal_id, numero_caja):
+        conn = self.db._get_conn()
+        conn.execute("BEGIN IMMEDIATE")
+
+        try:
+            existe = conn.execute(
+                "SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='ABIERTA'",
+                (canal_id, numero_caja),
+            ).fetchone()
+            if existe:
+                conn.commit()
+                return existe["id"]
+
+            cursor = conn.execute(
+                "INSERT INTO cajas (canal_id, numero_caja) VALUES (?, ?)",
+                (canal_id, numero_caja),
+            )
+            conn.commit()
+            return cursor.lastrowid
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            recuperada = conn.execute(
+                "SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='ABIERTA'",
+                (canal_id, numero_caja),
+            ).fetchone()
+            if recuperada:
+                return recuperada["id"]
+            raise
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
 
 def cerrar_caja(db, hw_mgr, caja, canal, contenido, peso_final):
