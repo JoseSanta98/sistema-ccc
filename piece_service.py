@@ -35,7 +35,7 @@ class PieceService:
         if nuevo_peso <= 0:
             raise ValueError("El peso debe ser mayor a 0")
 
-        return self.db.editar_pieza_full(pieza_id, nuevo_peso=nuevo_peso)
+        return self.db.editar_pieza(pieza_id, nuevo_peso)
 
     def borrar_pieza(self, pieza_id):
         pieza = self.db.get_pieza_by_id(pieza_id)
