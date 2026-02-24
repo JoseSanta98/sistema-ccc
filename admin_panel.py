@@ -15,7 +15,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
-from box_service import reabrir_caja
+from box_service import cerrar_caja, reabrir_caja
 from piece_service import PieceService
 
 # --- ESTILOS "HEAVY INDUSTRY" PARA ADMIN ---
@@ -262,6 +262,7 @@ class AdminPanel(QDialog):
         self.tbl_p.setHorizontalHeaderLabels(["#", "Producto", "Peso (Kg)", "Hora"])
         self.tbl_p.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tbl_p.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tbl_p.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.tbl_p.itemSelectionChanged.connect(self.on_piece_selection_changed)
         l.addWidget(self.tbl_p)
 
@@ -322,7 +323,7 @@ class AdminPanel(QDialog):
         b = self.db.get_caja_by_id(bid) 
         self.current_box_data = b 
         self.lbl_b_title.setText(f"CAJA #{b['numero_caja']}")
-        is_open = puede_cerrar_caja(b['estado'])
+        is_open = (b['estado'] == ESTADO_ABIERTA)
         
         self.lbl_b_badge.setText(b['estado'])
         self.lbl_b_badge.setObjectName("BadgeOpen" if is_open else "BadgeClosed")
@@ -349,6 +350,7 @@ class AdminPanel(QDialog):
         self.btn_toggle_box.setText("🔒 CERRAR" if is_open else "🔓 REABRIR")
         self.btn_toggle_box.setEnabled(True)
         self.btn_print_master.setVisible(not is_open)
+        self.btn_del_box.setEnabled(is_open)
         self.detail_stack.setCurrentIndex(2)
 
     def update_piece_edit_panel_state(self, is_open):
@@ -435,15 +437,29 @@ class AdminPanel(QDialog):
 
     def action_toggle_box(self):
         bid = self.current_box_data['id']
+        box_fresh = self.db.get_caja_by_id(bid)
 
-        if puede_reabrir_caja(self.current_box_data['estado']):
-            reabrir_caja(self.db, self.current_box_data)
+        if box_fresh['estado'] == ESTADO_ABIERTA:
+            contenido = self.db.get_contenido_caja(bid)
+            if not contenido:
+                QMessageBox.warning(self, "Aviso", "La caja no tiene piezas para cerrar.")
+                return
+            peso_final = box_fresh['peso_acumulado']
+            cerrar_caja(self.db, self.hw, box_fresh, self.current_canal_data, contenido, peso_final)
+        elif box_fresh['estado'] == ESTADO_CERRADA:
+            reabrir_caja(self.db, box_fresh)
+        else:
+            return
 
         self.load_tree_data()
         self.data_changed.emit()
         self.show_box_details()
 
     def action_delete_box(self):
+        if self.current_box_data['estado'] != ESTADO_ABIERTA:
+            QMessageBox.warning(self, "Aviso", "Solo se pueden borrar cajas ABIERTAS.")
+            return
+
         if QMessageBox.critical(self, "Eliminar", "¿Borrar caja?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
             self.db.eliminar_caja(self.current_box_data['id'])
             self.load_tree_data(); self.detail_stack.setCurrentIndex(0); self.data_changed.emit()
