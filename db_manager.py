@@ -7,6 +7,7 @@ DB_FILE = "produccion_local.db"
 SCHEMA_FILE = "schema.sql"
 MIGRATIONS_DIR = os.path.join("tools", "migrations")
 PRODUCTOS_ESTADO_MIGRATION = "001_add_estado_to_productos.sql"
+PIEZAS_CODIGO_INDEX_MIGRATION = "002_add_index_piezas_codigo_producto.sql"
 
 class DatabaseManager:
     def __init__(self):
@@ -38,25 +39,48 @@ class DatabaseManager:
     def _run_pending_migrations(self):
         conn = self._get_conn()
         try:
-            if not self._table_exists(conn, "productos"):
-                return
-
-            if self._column_exists(conn, "productos", "estado"):
-                return
-
-            migration_path = os.path.join(MIGRATIONS_DIR, PRODUCTOS_ESTADO_MIGRATION)
-            if not os.path.exists(migration_path):
-                print(f"❌ Error: No se encuentra migración {migration_path}")
-                return
-
-            with open(migration_path, "r", encoding="utf-8") as f:
-                script = f.read()
-
-            conn.executescript(script)
-            conn.commit()
-            print("✅ Migración aplicada: productos.estado agregado con valor por defecto ACTIVO.")
+            self._run_productos_estado_migration(conn)
+            self._run_piezas_codigo_index_migration(conn)
         finally:
             conn.close()
+
+    def _run_productos_estado_migration(self, conn):
+        if not self._table_exists(conn, "productos"):
+            return
+
+        if self._column_exists(conn, "productos", "estado"):
+            return
+
+        migration_path = os.path.join(MIGRATIONS_DIR, PRODUCTOS_ESTADO_MIGRATION)
+        if not os.path.exists(migration_path):
+            print(f"❌ Error: No se encuentra migración {migration_path}")
+            return
+
+        with open(migration_path, "r", encoding="utf-8") as f:
+            script = f.read()
+
+        conn.executescript(script)
+        conn.commit()
+        print("✅ Migración aplicada: productos.estado agregado con valor por defecto ACTIVO.")
+
+    def _run_piezas_codigo_index_migration(self, conn):
+        if not self._table_exists(conn, "piezas"):
+            return
+
+        if self._index_exists(conn, "piezas", "idx_piezas_codigo_producto"):
+            return
+
+        migration_path = os.path.join(MIGRATIONS_DIR, PIEZAS_CODIGO_INDEX_MIGRATION)
+        if not os.path.exists(migration_path):
+            print(f"❌ Error: No se encuentra migración {migration_path}")
+            return
+
+        with open(migration_path, "r", encoding="utf-8") as f:
+            script = f.read()
+
+        conn.executescript(script)
+        conn.commit()
+        print("✅ Migración aplicada: índice idx_piezas_codigo_producto creado.")
 
     def _table_exists(self, conn, table_name):
         row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)).fetchone()
@@ -65,6 +89,10 @@ class DatabaseManager:
     def _column_exists(self, conn, table_name, column_name):
         rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
         return any(row[1] == column_name for row in rows)
+
+    def _index_exists(self, conn, table_name, index_name):
+        rows = conn.execute(f"PRAGMA index_list('{table_name}')").fetchall()
+        return any(row[1] == index_name for row in rows)
 
     # --- 1. PRODUCTOS ---
     def get_producto(self, codigo):
