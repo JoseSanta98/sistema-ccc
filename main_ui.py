@@ -275,6 +275,13 @@ class MainUI(QMainWindow):
         if not code:
             return
         p = self._buscar_producto(code)
+        if p and p.get('estado') == 'INACTIVO':
+            self.current_product = None
+            self.lbl_prod_name.setText("PRODUCTO INACTIVO")
+            self.lbl_prod_name.setStyleSheet("color: #cc0000;")
+            self.btn_print.setEnabled(False)
+            self.txt_prod.selectAll()
+            return
         if p:
             self.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
