@@ -262,7 +262,30 @@ class AdminPanel(QDialog):
         self.tbl_p.setHorizontalHeaderLabels(["#", "Producto", "Peso (Kg)", "Hora"])
         self.tbl_p.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tbl_p.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tbl_p.itemSelectionChanged.connect(self.on_piece_selection_changed)
         l.addWidget(self.tbl_p)
+
+        self.edit_piece_panel = QGroupBox("Edición de pieza")
+        edit_layout = QVBoxLayout(self.edit_piece_panel)
+        edit_layout.addWidget(QLabel("Editar pieza seleccionada"))
+
+        self.spn_piece_weight = QDoubleSpinBox()
+        self.spn_piece_weight.setDecimals(2)
+        self.spn_piece_weight.setMinimum(0.01)
+        self.spn_piece_weight.setSingleStep(0.01)
+        edit_layout.addWidget(self.spn_piece_weight)
+
+        edit_buttons = QHBoxLayout()
+        self.btn_save_piece = QPushButton("Guardar cambios")
+        self.btn_save_piece.setObjectName("BtnAction")
+        self.btn_save_piece.clicked.connect(self.action_save_piece)
+        self.btn_delete_piece = QPushButton("Borrar pieza")
+        self.btn_delete_piece.setObjectName("BtnDanger")
+        self.btn_delete_piece.clicked.connect(self.action_delete_piece)
+        edit_buttons.addWidget(self.btn_save_piece)
+        edit_buttons.addWidget(self.btn_delete_piece)
+        edit_layout.addLayout(edit_buttons)
+        l.addWidget(self.edit_piece_panel)
 
         act_box = QGroupBox("Acciones Disponibles")
         hl = QHBoxLayout(act_box)
@@ -318,11 +341,66 @@ class AdminPanel(QDialog):
             self.tbl_p.setItem(r, 1, QTableWidgetItem(p['nombre_producto']))
             self.tbl_p.setItem(r, 2, QTableWidgetItem(f"{p['peso']:.2f}"))
             self.tbl_p.setItem(r, 3, QTableWidgetItem(p['hora']))
+
+        self.tbl_p.clearSelection()
+        self.spn_piece_weight.setValue(0.01)
+        self.update_piece_edit_panel_state(is_open)
             
-        self.btn_toggle_box.setText("🔓 REABRIR")
-        self.btn_toggle_box.setEnabled(not is_open)
+        self.btn_toggle_box.setText("🔒 CERRAR" if is_open else "🔓 REABRIR")
+        self.btn_toggle_box.setEnabled(True)
         self.btn_print_master.setVisible(not is_open)
         self.detail_stack.setCurrentIndex(2)
+
+    def update_piece_edit_panel_state(self, is_open):
+        self.edit_piece_panel.setVisible(is_open)
+        self.edit_piece_panel.setEnabled(is_open)
+
+    def on_piece_selection_changed(self):
+        row = self.tbl_p.currentRow()
+        if row < 0:
+            return
+
+        item_weight = self.tbl_p.item(row, 2)
+        if item_weight:
+            self.spn_piece_weight.setValue(float(item_weight.text()))
+
+    def action_save_piece(self):
+        row = self.tbl_p.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione una pieza para editar.")
+            return
+
+        pieza_id = self.tbl_p.item(row, 0).data(Qt.UserRole)
+        nuevo_peso = self.spn_piece_weight.value()
+
+        try:
+            self.piece_service.editar_pieza(pieza_id, nuevo_peso)
+        except ValueError as e:
+            QMessageBox.warning(self, "Aviso", str(e))
+            return
+
+        self.show_box_details()
+        self.data_changed.emit()
+
+    def action_delete_piece(self):
+        row = self.tbl_p.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "Aviso", "Seleccione una pieza para borrar.")
+            return
+
+        pieza_id = self.tbl_p.item(row, 0).data(Qt.UserRole)
+
+        if QMessageBox.question(self, "Confirmar borrado", "¿Desea borrar la pieza seleccionada?") != QMessageBox.Yes:
+            return
+
+        try:
+            self.piece_service.borrar_pieza(pieza_id)
+        except ValueError as e:
+            QMessageBox.warning(self, "Aviso", str(e))
+            return
+
+        self.show_box_details()
+        self.data_changed.emit()
 
     def action_reprint_tag(self):
         row = self.tbl_p.currentRow()
