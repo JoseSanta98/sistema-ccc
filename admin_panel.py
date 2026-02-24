@@ -17,6 +17,7 @@ from box_domain import (
 )
 from box_service import cerrar_caja, reabrir_caja
 from piece_service import PieceService
+from product_service import ProductService
 
 # --- ESTILOS "HEAVY INDUSTRY" PARA ADMIN ---
 ADMIN_STYLE = """
@@ -117,6 +118,7 @@ class AdminPanel(QDialog):
         super().__init__(parent)
         self.db = db_manager
         self.piece_service = PieceService(self.db)
+        self.product_service = ProductService(self.db)
         self.hw = hardware.HardwareManager() 
         
         self.box_to_open_in_main = None
@@ -488,7 +490,7 @@ class AdminPanel(QDialog):
 
     def load_catalog(self):
         self.tbl_cat.setRowCount(0)
-        prods = self.db.get_all_productos()
+        prods = self.product_service.list_all(include_inactive=True)
         for p in prods:
             r = self.tbl_cat.rowCount(); self.tbl_cat.insertRow(r)
             self.tbl_cat.setItem(r,0, QTableWidgetItem(str(p['codigo'])))
@@ -498,10 +500,40 @@ class AdminPanel(QDialog):
     def on_cat_select(self):
         r = self.tbl_cat.currentRow()
         if r >= 0:
-            self.inp_cod.setText(self.tbl_cat.item(r,0).text()); self.inp_nom.setText(self.tbl_cat.item(r,1).text()); self.inp_esp.setText(self.tbl_cat.item(r,2).text())
+            self.inp_cod.setText(self.tbl_cat.item(r,0).text()); self.inp_cod.setReadOnly(True); self.inp_nom.setText(self.tbl_cat.item(r,1).text()); self.inp_esp.setText(self.tbl_cat.item(r,2).text())
 
     def save_product(self):
-        if self.inp_cod.text(): self.db.upsert_producto(self.inp_cod.text(), self.inp_nom.text(), self.inp_esp.text()); self.load_catalog()
+        codigo = self.inp_cod.text()
+        if not codigo:
+            return
+
+        try:
+            if self.product_service.get(codigo):
+                self.product_service.update(codigo, self.inp_nom.text(), self.inp_esp.text())
+            else:
+                self.product_service.create(codigo, self.inp_nom.text(), self.inp_esp.text())
+        except ValueError as e:
+            QMessageBox.warning(self, "Aviso", str(e))
+            return
+
+        self.load_catalog()
+        self.inp_cod.clear(); self.inp_nom.clear(); self.inp_esp.clear()
+        self.inp_cod.setReadOnly(False)
 
     def del_product(self):
-        if self.inp_cod.text() and QMessageBox.question(self, "Borrar", "¿?") == QMessageBox.Yes: self.db.delete_producto(self.inp_cod.text()); self.load_catalog()
+        codigo = self.inp_cod.text()
+        if not codigo:
+            return
+
+        if QMessageBox.question(self, "Borrar", "¿?") != QMessageBox.Yes:
+            return
+
+        try:
+            self.product_service.delete_if_unused(codigo)
+        except ValueError as e:
+            QMessageBox.warning(self, "Aviso", str(e))
+            return
+
+        self.load_catalog()
+        self.inp_cod.clear(); self.inp_nom.clear(); self.inp_esp.clear()
+        self.inp_cod.setReadOnly(False)
