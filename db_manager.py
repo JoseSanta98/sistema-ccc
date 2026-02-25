@@ -295,6 +295,19 @@ class DatabaseManager:
         try:
             conn.execute("BEGIN IMMEDIATE")
             cursor = conn.cursor()
+
+            cursor.execute("SELECT estado FROM cajas WHERE id=?", (caja_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                raise ValueError("Caja no existe")
+
+            if row["estado"] != "ABIERTA":
+                raise ValueError("No se puede registrar pieza en caja cerrada")
+
+            if peso <= 0:
+                raise ValueError("Peso inválido")
+
             cursor.execute("SELECT MAX(consecutivo) FROM piezas WHERE caja_id=?", (caja_id,))
             res = cursor.fetchone()[0]
             sig = (res + 1) if res else 1
@@ -305,7 +318,12 @@ class DatabaseManager:
             new_id = cursor.lastrowid
             conn.commit()
             return sig, new_id
-        except:
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            if "UNIQUE constraint failed: piezas.caja_id, piezas.consecutivo" in str(e):
+                raise ValueError("Conflicto de consecutivo en la caja") from e
+            raise ValueError("Error de integridad al registrar pieza") from e
+        except Exception:
             conn.rollback()
             raise
         finally:
