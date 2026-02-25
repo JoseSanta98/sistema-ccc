@@ -23,14 +23,18 @@ CREATE TABLE IF NOT EXISTS canales (
 CREATE TABLE IF NOT EXISTS cajas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     canal_id INTEGER NOT NULL,
-    numero_caja INTEGER NOT NULL,  -- El numero fisico escrito con marcador
+    numero_caja INTEGER NOT NULL,
     peso_tara REAL DEFAULT 0.0,
     fecha_apertura DATETIME DEFAULT CURRENT_TIMESTAMP,
     fecha_cierre DATETIME,
-    estado TEXT DEFAULT 'ABIERTA', -- 'ABIERTA', 'CERRADA'
+    estado TEXT NOT NULL DEFAULT 'ABIERTA',
     
-    -- Si se borra el canal, se borran las cajas
-    FOREIGN KEY (canal_id) REFERENCES canales(id) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (canal_id) REFERENCES canales(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+        
+    CHECK (estado IN ('ABIERTA','CERRADA')),
+    UNIQUE (canal_id, numero_caja)
 );
 
 -- 4. PIEZAS (Registros de pesaje)
@@ -39,16 +43,17 @@ CREATE TABLE IF NOT EXISTS piezas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     caja_id INTEGER NOT NULL,
     codigo_producto TEXT NOT NULL,
-    nombre_producto TEXT,          -- Snapshot del nombre (por si cambia el catalogo despues)
-    peso REAL NOT NULL,
-    consecutivo INTEGER NOT NULL,  -- Pieza 1, 2, 3... de ESTA caja
+    nombre_producto TEXT NOT NULL,
+    peso REAL NOT NULL CHECK (peso > 0),
+    consecutivo INTEGER NOT NULL,
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Si se borra la caja, se borran las piezas
-    FOREIGN KEY (caja_id) REFERENCES cajas(id) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (caja_id) REFERENCES cajas(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+        
+    UNIQUE (caja_id, consecutivo)
 );
 
 -- Indices para busquedas rapidas
 CREATE INDEX IF NOT EXISTS idx_canal_estado ON canales(estado);
-CREATE INDEX IF NOT EXISTS idx_caja_activa ON cajas(canal_id, estado);
-CREATE INDEX IF NOT EXISTS idx_contenido_caja ON piezas(caja_id);
