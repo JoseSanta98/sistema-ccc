@@ -19,7 +19,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
-from box_service import cerrar_caja
+from box_service import BoxService, cerrar_caja
 from product_service import ProductService
 from piece_service import PieceService
 import styles 
@@ -39,6 +39,7 @@ class MainUI(QMainWindow):
         self.product_service = ProductService(self.db)
         self.piece_service = PieceService(self.db, self.product_service)
         self.hw_mgr = hardware.HardwareManager(config.get('HARDWARE', 'PRINTER_NAME', fallback='ZDesigner'))
+        self.box_service = BoxService(self.db, self.hw_mgr)
         
         self.current_canal = None
         self.current_box = None
