@@ -1,5 +1,6 @@
 # main_ui.py
 import datetime
+import traceback
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
     QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView, QSplitter, 
@@ -509,10 +510,19 @@ class MainUI(QMainWindow):
         self.k_t.itemAt(1).widget().setText(f"{m:02d}:{s:02d}")
 
     def flow_open_admin(self):
-        panel = AdminPanel(self.db, self); panel.exec()
-        if panel.box_to_open_in_main:
-            self.current_canal = panel.channel_to_open_in_main
-            self.current_box = panel.box_to_open_in_main
-            self.refresh_context()
-        elif self.current_canal:
-            self.refresh_context()
+        print("ADMIN CLICKED")
+        try:
+            print("Creating AdminPanel")
+            panel = AdminPanel(self.db, self)
+            print("Before exec")
+            panel.exec()
+            print("After exec")
+            if panel.box_to_open_in_main:
+                self.current_canal = panel.channel_to_open_in_main
+                self.current_box = panel.box_to_open_in_main
+                self.refresh_context()
+            elif self.current_canal:
+                self.refresh_context()
+        except Exception as e:
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error en ADMIN", f"Ocurrió un error al abrir ADMIN:\n{e}")
