@@ -117,8 +117,8 @@ class AdminPanel(QDialog):
     def __init__(self, db_manager, parent=None):
         super().__init__(parent)
         self.db = db_manager
-        self.piece_service = PieceService(self.db)
         self.product_service = ProductService(self.db)
+        self.piece_service = PieceService(self.db, self.product_service)
         self.hw = hardware.HardwareManager() 
         
         self.box_to_open_in_main = None
