@@ -137,7 +137,8 @@ class AdminPanel(QDialog):
         self.setWindowFlags(Qt.Window | Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         
         screen = QGuiApplication.primaryScreen().availableGeometry()
-        w, h = min(1150, screen.width() * 0.95), min(700, screen.height() * 0.9)
+        w = int(min(1150, screen.width() * 0.95))
+        h = int(min(700, screen.height() * 0.9))
         self.resize(w, h)
 
     def setup_ui(self):
