@@ -404,7 +404,7 @@ class MainUI(QMainWindow):
         if not self.current_canal: return
         d = BoxSelectorDialog(self.db, self.current_canal['id'], self)
         if d.exec():
-            bid = self.db.crear_o_recuperar_caja(self.current_canal['id'], d.res)
+            bid = self.box_service.crear_o_recuperar_caja(self.current_canal['id'], d.res)
             self.current_box = self.db.get_caja_by_id(bid)
             self.refresh_context()
             self.flow_select_box(self.current_box)
