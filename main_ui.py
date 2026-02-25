@@ -27,6 +27,14 @@ import hardware
 from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError, resolver_peso_cierre
 
 
+class SessionState:
+    def __init__(self):
+        self.current_canal = None
+        self.current_box = None
+        self.current_product = None
+        self.last_activity = datetime.datetime.now()
+
+
 class MainUI(QMainWindow):
     def __init__(self, config):
         super().__init__()
@@ -40,11 +48,8 @@ class MainUI(QMainWindow):
         self.piece_service = PieceService(self.db, self.product_service)
         self.hw_mgr = hardware.HardwareManager(config.get('HARDWARE', 'PRINTER_NAME', fallback='ZDesigner'))
         self.box_service = BoxService(self.db, self.hw_mgr)
-        
-        self.current_canal = None
-        self.current_box = None
-        self.current_product = None
-        self.last_activity = datetime.datetime.now()
+
+        self.state = SessionState()
         
         # Estado de hardware
         self.scale_active = False 
@@ -77,7 +82,7 @@ class MainUI(QMainWindow):
         self.btn_sin = QPushButton("SINIIGA: ---\nClic para iniciar")
         self.btn_sin.setObjectName("btnSiniiga")
         self.btn_sin.setFixedSize(260, 95)
-        self.btn_sin.clicked.connect(self.flow_open_siniiga)
+        self.btn_sin.clicked.connect(self.open_siniiga_flow)
         th.addWidget(self.btn_sin)
         
         sa = QScrollArea()
@@ -156,14 +161,14 @@ class MainUI(QMainWindow):
         self.txt_weight.setObjectName("WeightField") # Fuente Digital Permanente
         self.txt_weight.setAlignment(Qt.AlignRight)
         self.txt_weight.setFixedHeight(125)
-        self.txt_weight.returnPressed.connect(self.logic_save_print)
+        self.txt_weight.returnPressed.connect(self.save_and_print_piece)
         lv.addWidget(self.txt_weight)
         
         self.btn_print = QPushButton("IMPRIMIR ETIQUETA")
         self.btn_print.setObjectName("BtnPrint")
         self.btn_print.setFixedHeight(85)
         self.btn_print.setEnabled(False)
-        self.btn_print.clicked.connect(self.logic_save_print)
+        self.btn_print.clicked.connect(self.save_and_print_piece)
         lv.addWidget(self.btn_print)
         lv.addStretch()
         
@@ -194,11 +199,11 @@ class MainUI(QMainWindow):
         al = QHBoxLayout()
         btn_del = QPushButton("🗑️ BORRAR")
         btn_del.setStyleSheet(f"background:{styles.COLOR_BTN_DANGER}; color:white;")
-        btn_del.clicked.connect(self.logic_delete_row)
+        btn_del.clicked.connect(self.delete_selected_piece)
         
         btn_rep = QPushButton("🏷️ REIMPRIMIR")
         btn_rep.setStyleSheet(f"background:{styles.COLOR_BTN_WARN}; color:black;")
-        btn_rep.clicked.connect(self.logic_reprint)
+        btn_rep.clicked.connect(self.reprint_selected_piece)
         al.addWidget(btn_del)
         al.addWidget(btn_rep)
         rv.addLayout(al)
@@ -206,7 +211,7 @@ class MainUI(QMainWindow):
         self.btn_cls = QPushButton("📦 CERRAR CAJA / ETIQUETA MASTER")
         self.btn_cls.setObjectName("BtnClose")
         self.btn_cls.setFixedHeight(70)
-        self.btn_cls.clicked.connect(self.logic_close_box)
+        self.btn_cls.clicked.connect(self.close_box_flow)
         rv.addWidget(self.btn_cls)
         
         spl.addWidget(left_w)
@@ -280,7 +285,7 @@ class MainUI(QMainWindow):
             return
         p = self._buscar_producto(code)
         if p:
-            self.current_product = p
+            self.state.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
             self.lbl_prod_name.setStyleSheet("color:#008000;")
             self.btn_print.setEnabled(True)
@@ -288,7 +293,7 @@ class MainUI(QMainWindow):
             if not self.scale_active:
                 self.txt_weight.clear()
         else:
-            self.current_product = None
+            self.state.current_product = None
             prod_inactivo = self.product_service.get_producto(code)
             if prod_inactivo and prod_inactivo.get('estado') == 'INACTIVO':
                 self.lbl_prod_name.setText("PRODUCTO INACTIVO")
@@ -319,101 +324,161 @@ class MainUI(QMainWindow):
 
         return peso_final
 
-    def _registrar_e_imprimir(self, final_w):
-        consec, pid = self.piece_service.registrar_pieza(self.current_box['id'], self.current_product['codigo'], self.current_product['nombre'], final_w)
-        full = self.db.get_pieza_by_id(pid)
-        ok, msg = self.hw_mgr.print_ticket(full, self.current_box, self.current_canal, self.current_product)
-        if not ok: QMessageBox.critical(self, "Impresora", msg)
+    def _register_piece(self, final_w):
+        consec, pid = self.piece_service.registrar_pieza(
+            self.state.current_box['id'],
+            self.state.current_product['codigo'],
+            self.state.current_product['nombre'],
+            final_w
+        )
+        return pid
 
-    def logic_save_print(self):
-        if not self.current_box or not self.current_product:
+    def _print_piece(self, pid):
+        full = self.db.get_pieza_by_id(pid)
+        ok, msg = self.hw_mgr.print_ticket(
+            full,
+            self.state.current_box,
+            self.state.current_canal,
+            self.state.current_product
+        )
+        if not ok:
+            QMessageBox.critical(self, "Impresora", msg)
+
+    def _validate_weight(self):
+        return self._calcular_peso_final()
+
+    def _apply_weight_policy(self, final_w):
+        return final_w
+
+    def _post_print_refresh(self):
+        self.state.current_box = self.db.get_caja_by_id(self.state.current_box['id'])
+        self.state.last_activity = datetime.datetime.now()
+        self.refresh_table()
+        self.update_stats()
+        self.highlight_buttons(self.state.current_box['numero_caja'])
+
+        if self.scale_active:
+            self.txt_weight.setFocus()
             return
 
-        final_w = self._calcular_peso_final()
+        self.txt_weight.clear()
+        if self.chk_lock_prod.isChecked():
+            self.txt_weight.setFocus()
+            return
+
+        self.txt_prod.clear()
+        self.state.current_product = None
+        self.lbl_prod_name.setText("LISTO - ESCANEE PRODUCTO")
+        self.lbl_prod_name.setStyleSheet("color: #000;")
+        self.btn_print.setEnabled(False)
+        self.txt_prod.setFocus()
+
+    def save_and_print_piece(self):
+        if not self.state.current_box or not self.state.current_product:
+            return
+
+        final_w = self._validate_weight()
         if final_w is None:
             return
 
-        if not puede_agregar_pieza(self.current_box['estado']):
+        final_w = self._apply_weight_policy(final_w)
+        if not puede_agregar_pieza(self.state.current_box['estado']):
             return
 
         try:
-            self._registrar_e_imprimir(final_w)
+            pid = self._register_piece(final_w)
+            self._print_piece(pid)
         except ValueError as e:
             QMessageBox.warning(self, "Error", str(e))
             return
 
-        self.current_box = self.db.get_caja_by_id(self.current_box['id'])
-
-        self.last_activity = datetime.datetime.now()
-        self.refresh_table()
-        self.update_stats()
-        self.highlight_buttons(self.current_box['numero_caja'])
-
-        if self.scale_active:
-            self.txt_weight.setFocus()
-        else:
-            self.txt_weight.clear()
-            if self.chk_lock_prod.isChecked():
-                self.txt_weight.setFocus()
-            else:
-                self.txt_prod.clear()
-                self.current_product = None
-                self.lbl_prod_name.setText("LISTO - ESCANEE PRODUCTO")
-                self.lbl_prod_name.setStyleSheet("color: #000;")
-                self.btn_print.setEnabled(False)
-                self.txt_prod.setFocus()
+        self._post_print_refresh()
 
     def _ejecutar_cierre_caja(self, peso_final, contenido):
-        cerrar_caja(self.db, self.hw_mgr, self.current_box, self.current_canal, contenido, peso_final)
+        cerrar_caja(
+            self.db,
+            self.hw_mgr,
+            self.state.current_box,
+            self.state.current_canal,
+            contenido,
+            peso_final
+        )
 
-    def logic_close_box(self):
-        if not self.current_box: return
-        if not puede_cerrar_caja(self.current_box['estado']):
+    def _validate_close_conditions(self):
+        if not self.state.current_box:
+            return None
+        if not puede_cerrar_caja(self.state.current_box['estado']):
             return
-        cont = self.db.get_contenido_caja(self.current_box['id'])
-        if not cont: return
-        peso_calc = calcular_peso_caja(cont)
-        peso_f, ok = QInputDialog.getDouble(self, "Peso Final", f"Suma: {peso_calc:.2f} Kg", value=peso_calc, minValue=0.1, maxValue=20.0, decimals=2)
-        if ok:
-            try:
-                resultado = resolver_peso_cierre(peso_calc, peso_f)
-            except PesoInvalidoError as e:
-                QMessageBox.warning(self, "Error de peso", str(e))
-                return
+        contenido = self.db.get_contenido_caja(self.state.current_box['id'])
+        if not contenido:
+            return None
+        return contenido
 
-            peso_final = resultado["peso_final"]
+    def _request_manual_override(self, peso_calc):
+        peso_f, ok = QInputDialog.getDouble(
+            self,
+            "Peso Final",
+            f"Suma: {peso_calc:.2f} Kg",
+            value=peso_calc,
+            minValue=0.1,
+            maxValue=20.0,
+            decimals=2
+        )
+        if not ok:
+            return None
 
-            if resultado["hay_diferencia"]:
-                QMessageBox.warning(
-                    self,
-                    "Advertencia",
-                    f"El peso final difiere de la suma calculada por {resultado['delta']:.2f} kg"
-                )
+        try:
+            return resolver_peso_cierre(peso_calc, peso_f)
+        except PesoInvalidoError as e:
+            QMessageBox.warning(self, "Error de peso", str(e))
+            return None
 
-            self._ejecutar_cierre_caja(peso_final, cont)
-            self.current_box = None
-            self.refresh_context()
+    def _execute_close(self, peso_final, contenido):
+        self._ejecutar_cierre_caja(peso_final, contenido)
+        self.state.current_box = None
+        self.refresh_context()
 
-    def flow_open_siniiga(self):
+    def close_box_flow(self):
+        contenido = self._validate_close_conditions()
+        if not contenido:
+            return
+
+        peso_calc = calcular_peso_caja(contenido)
+        resultado = self._request_manual_override(peso_calc)
+        if not resultado:
+            return
+
+        if resultado["hay_diferencia"]:
+            QMessageBox.warning(
+                self,
+                "Advertencia",
+                f"El peso final difiere de la suma calculada por {resultado['delta']:.2f} kg"
+            )
+
+        self._execute_close(resultado["peso_final"], contenido)
+
+    def open_siniiga_flow(self):
         d = SiniigaSelectorDialog(self.db, self)
         if d.exec() and d.selected_siniiga:
             data = d.selected_siniiga
-            self.current_canal = self.db.buscar_o_crear_canal(data['texto']) if 'nuevo' in data else data
-            self.current_box = None
+            self.state.current_canal = self.db.buscar_o_crear_canal(data['texto']) if 'nuevo' in data else data
+            self.state.current_box = None
             self.refresh_context()
 
-    def flow_new_box(self):
-        if not self.current_canal: return
-        d = BoxSelectorDialog(self.db, self.current_canal['id'], self)
+    def open_new_box_flow(self):
+        if not self.state.current_canal:
+            return
+        d = BoxSelectorDialog(self.db, self.state.current_canal['id'], self)
         if d.exec():
-            bid = self.box_service.crear_o_recuperar_caja(self.current_canal['id'], d.res)
-            self.current_box = self.db.get_caja_by_id(bid)
+            bid = self.box_service.crear_o_recuperar_caja(self.state.current_canal['id'], d.res)
+            self.state.current_box = self.db.get_caja_by_id(bid)
             self.refresh_context()
-            self.flow_select_box(self.current_box)
+            self.select_box(self.state.current_box)
 
-    def flow_select_box(self, box_data):
-        if not box_data: return
-        self.current_box = box_data
+    def select_box(self, box_data):
+        if not box_data:
+            return
+        self.state.current_box = box_data
         self.highlight_buttons(box_data['numero_caja'])
         self.refresh_table()
         self.txt_prod.setEnabled(True)
@@ -433,44 +498,67 @@ class MainUI(QMainWindow):
                     w.setStyleSheet(styles.STYLE_BOX_OPEN)
 
     def refresh_context(self):
-        if not self.current_canal: return
-        stats = self.db.get_resumen_canal(self.current_canal['id'])
-        cajas_ab = self.db.get_cajas_abiertas(self.current_canal['id'])
-        siniiga_display = self.current_canal['siniiga'].split("-")[0]
+        if not self.state.current_canal:
+            return
+        stats = self.db.get_resumen_canal(self.state.current_canal['id'])
+        cajas_ab = self.db.get_cajas_abiertas(self.state.current_canal['id'])
+        siniiga_display = self.state.current_canal['siniiga'].split("-")[0]
         
         num_ab = len(cajas_ab)
         num_ce = stats['total_cajas'] - num_ab
-        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} ABIERTAS / {num_ce} CERRADAS)"
+        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} ABIERTAS / {num_ce} CERRADAS)"
         
         self.btn_sin.setText(header)
         self.btn_sin.setStyleSheet("background-color:#28a745; color:black; border:3px solid #1e7e34; text-align:left; padding-left:10px; font-size:14px; font-weight:bold;")
         
+        self._rebuild_box_buttons(cajas_ab)
+        self._sync_selected_box(cajas_ab)
+
+    def _rebuild_box_buttons(self, cajas_ab):
         while self.box_layout.count():
             it = self.box_layout.takeAt(0)
             w = it.widget()
-            if w: w.deleteLater()
-            
+            if w:
+                w.deleteLater()
+
         for c in cajas_ab:
             b = QPushButton(f"CAJA {c['numero_caja']}\n{c['peso_acumulado']:.1f}kg")
-            b.setProperty("class", "boxBtn"); b.setStyleSheet(styles.STYLE_BOX_OPEN)
+            b.setProperty("class", "boxBtn")
+            b.setStyleSheet(styles.STYLE_BOX_OPEN)
             cid = c['id']
-            b.clicked.connect(lambda ch, cid=cid: self.flow_select_box(self.db.get_caja_by_id(cid)))
+            b.clicked.connect(lambda ch, cid=cid: self.select_box(self.db.get_caja_by_id(cid)))
             self.box_layout.addWidget(b)
-            
+
         add = QPushButton("+")
-        add.setFixedSize(65, 80); add.clicked.connect(self.flow_new_box); self.box_layout.addWidget(add)
-        
-        if not self.current_box:
-            self.btn_print.setEnabled(False); self.txt_prod.setEnabled(False); self.lbl_prod_name.setText("⚠️ SELECCIONE CAJA")
+        add.setFixedSize(65, 80)
+        add.clicked.connect(self.open_new_box_flow)
+        self.box_layout.addWidget(add)
+
+    def _sync_selected_box(self, cajas_ab):
+        if not self.state.current_box:
+            self.btn_print.setEnabled(False)
+            self.txt_prod.setEnabled(False)
+            self.lbl_prod_name.setText("⚠️ SELECCIONE CAJA")
+            return
+
+        still = next((c for c in cajas_ab if c['id'] == self.state.current_box['id']), None)
+        if still:
+            self.select_box(self.db.get_caja_by_id(still['id']))
         else:
-            still = next((c for c in cajas_ab if c['id'] == self.current_box['id']), None)
-            if still: self.flow_select_box(self.db.get_caja_by_id(still['id']))
-            else: self.current_box = None; self.refresh_context()
+            self.state.current_box = None
+            self.refresh_context()
 
     def refresh_table(self):
         self.table.setRowCount(0)
-        if not self.current_box: return
-        items = self.db.get_contenido_caja(self.current_box['id'])
+        if not self.state.current_box:
+            return
+        items = self._fetch_box_items()
+        self._render_table(items)
+
+    def _fetch_box_items(self):
+        return self.db.get_contenido_caja(self.state.current_box['id'])
+
+    def _render_table(self, items):
         self.table.setRowCount(len(items))
         for r, i in enumerate(items):
             item_n = QTableWidgetItem(str(i['consecutivo']))
@@ -480,25 +568,32 @@ class MainUI(QMainWindow):
             self.table.setItem(r, 2, QTableWidgetItem(i['nombre_producto']))
             self.table.setItem(r, 3, QTableWidgetItem(f"{i['peso']:.2f}"))
             self.table.setItem(r, 4, QTableWidgetItem(i['hora']))
-        self.lbl_total.setText(f"TOTAL: {self.current_box['peso_acumulado']:.2f} Kg")
+        self.lbl_total.setText(f"TOTAL: {self.state.current_box['peso_acumulado']:.2f} Kg")
         self.table.scrollToBottom()
 
-    def logic_delete_row(self):
+    def delete_selected_piece(self):
         r = self.table.currentRow()
-        if r < 0: return
+        if r < 0:
+            return
         pid = self.table.item(r, 0).data(Qt.UserRole)
         if QMessageBox.question(self, "Borrar", "¿Eliminar registro?") == QMessageBox.Yes:
             self.db.borrar_pieza(pid)
-            self.current_box = self.db.get_caja_by_id(self.current_box['id'])
+            self.state.current_box = self.db.get_caja_by_id(self.state.current_box['id'])
             self.refresh_context()
             self.refresh_table()
 
-    def logic_reprint(self):
+    def reprint_selected_piece(self):
         r = self.table.currentRow()
-        if r < 0: return
+        if r < 0:
+            return
         pid = self.table.item(r, 0).data(Qt.UserRole)
         p = self.db.get_pieza_by_id(pid)
-        self.hw_mgr.print_ticket(p, self.current_box, self.current_canal, {'nombre':p['nombre_producto'],'codigo':p['codigo_producto'],'especie':'REIMP'})
+        self.hw_mgr.print_ticket(
+            p,
+            self.state.current_box,
+            self.state.current_canal,
+            {'nombre': p['nombre_producto'], 'codigo': p['codigo_producto'], 'especie': 'REIMP'}
+        )
 
     def update_stats(self):
         s = self.db.get_estadisticas_generales()
@@ -506,7 +601,7 @@ class MainUI(QMainWindow):
         self.k_p.itemAt(1).widget().setText(f"{s['peso_hoy']:.1f} Kg")
 
     def update_kpis(self):
-        d = datetime.datetime.now() - self.last_activity
+        d = datetime.datetime.now() - self.state.last_activity
         m, s = divmod(int(d.total_seconds()), 60)
         self.k_t.itemAt(1).widget().setText(f"{m:02d}:{s:02d}")
 
@@ -519,10 +614,10 @@ class MainUI(QMainWindow):
             panel.exec()
             print("After exec")
             if panel.box_to_open_in_main:
-                self.current_canal = panel.channel_to_open_in_main
-                self.current_box = panel.box_to_open_in_main
+                self.state.current_canal = panel.channel_to_open_in_main
+                self.state.current_box = panel.box_to_open_in_main
                 self.refresh_context()
-            elif self.current_canal:
+            elif self.state.current_canal:
                 self.refresh_context()
         except Exception as e:
             traceback.print_exc()
