@@ -57,3 +57,9 @@ CREATE TABLE IF NOT EXISTS piezas (
 
 -- Indices para busquedas rapidas
 CREATE INDEX IF NOT EXISTS idx_canal_estado ON canales(estado);
+
+CREATE INDEX IF NOT EXISTS idx_cajas_canal_estado
+ON cajas(canal_id, estado);
+
+CREATE INDEX IF NOT EXISTS idx_piezas_caja
+ON piezas(caja_id);
