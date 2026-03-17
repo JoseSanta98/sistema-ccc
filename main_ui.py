@@ -19,7 +19,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
-from box_service import BoxService, cerrar_caja
+from box_service import BoxService
 from product_service import ProductService
 from piece_service import PieceService
 import styles 
@@ -395,10 +395,8 @@ class MainUI(QMainWindow):
         self._post_print_refresh()
 
     def _ejecutar_cierre_caja(self, peso_final, contenido):
-        cerrar_caja(
-            self.db,
-            self.hw_mgr,
-            self.state.current_box,
+        self.box_service.cerrar_caja(
+            self.state.current_box['id'],
             self.state.current_canal,
             contenido,
             peso_final
