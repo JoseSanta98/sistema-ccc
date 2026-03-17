@@ -251,18 +251,9 @@ class DatabaseManager:
         return dict(row) if row else None
 
     def crear_o_recuperar_caja(self, canal_id, numero_caja):
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='ABIERTA'", (canal_id, numero_caja))
-        existe = cursor.fetchone()
-        if existe:
-            conn.close()
-            return existe['id']
-        cursor.execute("INSERT INTO cajas (canal_id, numero_caja) VALUES (?, ?)", (canal_id, numero_caja))
-        conn.commit()
-        new_id = cursor.lastrowid
-        conn.close()
-        return new_id
+        raise NotImplementedError(
+            "crear_o_recuperar_caja debe usarse desde BoxService, no desde DatabaseManager"
+        )
 
     def cerrar_caja(self, caja_id):
         conn = self._get_conn()
