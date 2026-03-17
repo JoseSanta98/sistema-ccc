@@ -96,34 +96,24 @@ class DatabaseManager:
 
     # --- 1. PRODUCTOS ---
     def get_producto(self, codigo):
-        conn = self._get_conn()
-        row = conn.execute("SELECT * FROM productos WHERE codigo=?", (codigo.strip(),)).fetchone()
-        conn.close()
-        return dict(row) if row else None
+        raise NotImplementedError(
+            "Operación de producto debe usarse desde ProductService"
+        )
 
     def get_all_productos(self):
-        conn = self._get_conn()
-        rows = conn.execute("SELECT * FROM productos ORDER BY codigo ASC").fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+        raise NotImplementedError(
+            "Operación de producto debe usarse desde ProductService"
+        )
 
     def upsert_producto(self, codigo, nombre, especie):
-        conn = self._get_conn()
-        conn.execute("""
-            INSERT INTO productos (codigo, nombre, especie) VALUES (?, ?, ?)
-            ON CONFLICT(codigo) DO UPDATE SET nombre=excluded.nombre, especie=excluded.especie
-        """, (codigo.strip(), nombre.strip(), especie.strip()))
-        conn.commit()
-        conn.close()
+        raise NotImplementedError(
+            "Operación de producto debe usarse desde ProductService"
+        )
 
     def delete_producto(self, codigo):
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM productos WHERE codigo=?", (codigo.strip(),))
-        affected = cursor.rowcount
-        conn.commit()
-        conn.close()
-        return affected > 0
+        raise NotImplementedError(
+            "Operación de producto debe usarse desde ProductService"
+        )
 
     # --- 2. CANALES ---
     def get_canales_activos(self):
