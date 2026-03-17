@@ -134,10 +134,16 @@ class SiniigaSelectorDialog(QDialog):
         lote_actual = datetime.now().strftime("%d%m%y")
         
         if is_intro:
-            if len(t) == 4:
-                target_siniiga = f"080000{t}-{lote_actual}"
+            if len(t) == 4 and t.isdigit():
+                from datetime import datetime
+                ahora = datetime.now()
+                yy = ahora.strftime("%y")
+                ddd = ahora.strftime("%j")
+                target_siniiga = f"01{yy}{ddd}{t}"
             else:
-                self.btn.setEnabled(False); self.lbl_info.setText("Ingrese 4 dígitos..."); return
+                self.btn.setEnabled(False)
+                self.lbl_info.setText("Ingrese 4 dígitos...")
+                return
         else:
             target_siniiga = t
 
@@ -154,7 +160,7 @@ class SiniigaSelectorDialog(QDialog):
             self.btn.setEnabled(True)
         else:
             self.selected_siniiga = {'nuevo': True, 'texto': target_siniiga}
-            self.btn.setText(f"CREAR {t}")
+            self.btn.setText(f"CREAR {target_siniiga}")
             self.lbl_info.setText("Se generará un nuevo canal.")
             self.btn.setEnabled(len(t) >= 4)
 
