@@ -107,15 +107,25 @@ class SiniigaSelectorDialog(QDialog):
     def filtrar(self, t):
         self.lst.clear()
         term = t.strip()
+
         for c in self.canales:
-            clean_siniiga = c['siniiga'].split("-")[0]
-            if term in clean_siniiga:
-                i = QListWidgetItem(f"📂 {clean_siniiga} | Lote: {c['lote_dia']}")
+            s = str(c['siniiga'])
+            match = False
+
+            if len(term) == 4 and term.isdigit():
+                if s[-4:] == term:
+                    match = True
+            else:
+                if term in s:
+                    match = True
+
+            if match:
+                i = QListWidgetItem(f"📂 {c['siniiga']} | Lote: {c['lote_dia']}")
                 i.setData(Qt.UserRole, c)
                 self.lst.addItem(i)
-        
+
         if self.lst.count() == 0 and t:
-            i = QListWidgetItem("✨ Crear Nuevo...")
+            i = QListWidgetItem("✨ Crear Nuevo Siniiga...")
             i.setFlags(Qt.NoItemFlags)
             self.lst.addItem(i)
 
