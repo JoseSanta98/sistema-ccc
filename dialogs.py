@@ -28,26 +28,7 @@ class SiniigaSelectorDialog(QDialog):
         self.filtrar("") 
         
     def init_ui(self):
-        self.setStyleSheet("""
-            QDialog { background: #202020; border: 2px solid #444; }
-            QLabel { color: #fff; font-size: 22px; font-weight: bold; font-family: 'Segoe UI'; }
-            QLineEdit { 
-                font-size: 32px; padding: 10px; background: #1a1a1a; 
-                color: #fff; border: 2px solid #555; border-radius: 4px;
-            }
-            QLineEdit:focus { border: 2px solid #007acc; }
-            QListWidget { background: #2d2d2d; color: #eee; font-size: 16px; border: 1px solid #444; }
-            QListWidget::item { padding: 8px; }
-            QListWidget::item:selected { background: #007acc; color: white; }
-            QPushButton { 
-                background: #444; color: #888; font-size: 16px; 
-                padding: 15px; border: none; border-radius: 4px; font-weight: bold;
-            }
-            QPushButton:enabled { background: #007acc; color: #fff; }
-            QPushButton:hover:enabled { background: #005bb5; }
-            QLabel#InfoLabel { font-size: 14px; color: #aaa; font-weight: normal; }
-            QCheckBox { color: #ddd; font-size: 16px; font-weight: bold; padding: 5px; }
-        """)
+        self.setStyleSheet("")
 
         v = QVBoxLayout(self)
         v.setContentsMargins(25, 25, 25, 25)
@@ -250,11 +231,11 @@ class BoxSelectorDialog(QDialog):
         
         # CASO 1: YA ABIERTA
         if n in self.open_nums:
-            self.ba.setText(f"📂 SELECCIONAR {n}"); self.ba.setStyleSheet("background: #005bb5; color: white;")
+            self.ba.setText(f"📂 SELECCIONAR {n}"); self.ba.setStyleSheet("background: #005bb5;")
             self.lbl.setText("Esta caja ya está activa.")
         # CASO 2: SECUENCIA CORRECTA
         elif n == self.sug:
-            self.ba.setText(f"✨ CREAR {n}"); self.ba.setStyleSheet("background: #28a745; color: white;")
+            self.ba.setText(f"✨ CREAR {n}"); self.ba.setStyleSheet("background: #28a745;")
             self.lbl.setText("Secuencia correcta.")
         # CASO 3: SALTO
         elif n > self.sug:
@@ -263,7 +244,7 @@ class BoxSelectorDialog(QDialog):
             self.lbl.setText(f"CUIDADO: Se saltarán {salto} números.")
         # CASO 4: ANTERIOR (REUTILIZACIÓN)
         else:
-            self.ba.setText(f"♻️ REUTILIZAR {n}"); self.ba.setStyleSheet("background: #c65911; color: white;")
+            self.ba.setText(f"♻️ REUTILIZAR {n}"); self.ba.setStyleSheet("background: #c65911;")
             self.lbl.setText("AVISO: Este número ya se usó anteriormente.")
 
         self.ba.setEnabled(True)
