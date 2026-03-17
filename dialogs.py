@@ -135,7 +135,6 @@ class SiniigaSelectorDialog(QDialog):
         
         if is_intro:
             if len(t) == 4 and t.isdigit():
-                from datetime import datetime
                 ahora = datetime.now()
                 yy = ahora.strftime("%y")
                 ddd = ahora.strftime("%j")
@@ -155,7 +154,7 @@ class SiniigaSelectorDialog(QDialog):
 
         if ex:
             self.selected_siniiga = ex
-            self.btn.setText(f"ABRIR {t}")
+            self.btn.setText(f"ABRIR {ex['siniiga']}")
             self.lbl_info.setText("Canal existente encontrado.")
             self.btn.setEnabled(True)
         else:
