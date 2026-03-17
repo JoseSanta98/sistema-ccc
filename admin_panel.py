@@ -15,7 +15,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
-from box_service import cerrar_caja, reabrir_caja
+from box_service import BoxService, reabrir_caja
 from piece_service import PieceService
 from product_service import ProductService
 
@@ -120,6 +120,8 @@ class AdminPanel(QDialog):
         self.product_service = ProductService(self.db)
         self.piece_service = PieceService(self.db, self.product_service)
         self.hw = hardware.HardwareManager() 
+        self.hw_mgr = self.hw
+        self.box_service = BoxService(self.db, self.hw_mgr)
         
         self.box_to_open_in_main = None
         self.channel_to_open_in_main = None
@@ -448,7 +450,12 @@ class AdminPanel(QDialog):
                 QMessageBox.warning(self, "Aviso", "La caja no tiene piezas para cerrar.")
                 return
             peso_final = box_fresh['peso_acumulado']
-            cerrar_caja(self.db, self.hw, box_fresh, self.current_canal_data, contenido, peso_final)
+            self.box_service.cerrar_caja(
+                box_fresh['id'],
+                self.current_canal_data,
+                contenido,
+                peso_final
+            )
         elif box_fresh['estado'] == ESTADO_CERRADA:
             reabrir_caja(self.db, box_fresh)
         else:
