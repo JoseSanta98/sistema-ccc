@@ -1,162 +1,89 @@
-# Reglas de Trabajo – Sistema CCC
-
-Estas reglas controlan cómo se modifica el sistema.
-
-Aplican especialmente al uso de Codex.
+# Reglas de Trabajo – Sistema CCC (Estado Actual)
 
 ---
 
 ## 1. Regla principal
 
-El sistema está en producción.
+Sistema en producción.
 
 Todo cambio debe:
 
-- mantener comportamiento existente
-- ser predecible
-- ser verificable
+* mantener comportamiento
+* ser explícito
+* ser verificable
 
 ---
 
-## 2. Cambios
+## 2. Dominio
 
-Cada cambio debe:
+* cada dominio tiene UNA fuente de verdad:
 
-- tener un objetivo único
-- ser entendible
-- ser reversible
+  * SINIIGA → UI controlada
+  * Caja → BoxService
+  * Producto → ProductService
 
 No permitido:
 
-- cambios mezclados
-- cambios implícitos
-- cambios sin evidencia
+* duplicar lógica
+* crear rutas paralelas
 
 ---
 
-## 3. Dominio
+## 3. UI
 
-El sistema tiene reglas ya implementadas.
+La UI:
 
-Se debe:
+* refleja estado
+* no define reglas
 
-- respetar comportamiento actual
-- no modificar reglas sin instrucción explícita
+No debe:
 
-Importante:
-
-- existen transformaciones de SINIIGA en el sistema
-- estas no deben cambiarse sin definición previa
+* implementar lógica de negocio
+* duplicar validaciones
 
 ---
 
-## 4. Transformaciones
-
-Permitido:
-
-- usar transformaciones existentes
-
-No permitido:
-
-- crear nuevas transformaciones sin validación
-- modificar lógica de identidad
-
----
-
-## 5. UI
-
-La UI actualmente:
-
-- contiene lógica de negocio
-- accede a DB
-- accede a hardware
-
-Esto se acepta como estado actual.
-
-No se debe:
-
-- aumentar acoplamiento
-- duplicar más lógica
-
----
-
-## 6. Servicios
+## 4. Servicios
 
 Los servicios:
 
-- validan reglas
-- no son única fuente de verdad
-
-No se debe:
-
-- asumir que toda lógica está ahí
-- mover lógica sin validar impacto
+* contienen la lógica del sistema
+* son punto único de operación
 
 ---
 
-## 7. DB
+## 5. DB
 
 La base de datos:
 
-- contiene validaciones reales
-- protege integridad
-
-No se debe:
-
-- eliminar validaciones
-- cambiar constraints sin análisis
+* solo persiste
+* no define reglas de negocio
 
 ---
 
-## 8. Hardware
+## 6. Cambios
 
-HardwareManager:
+Cada cambio:
 
-- es crítico para operación
-- impacta directamente planta
-
-No se modifica:
-
-- formato de impresión
-- lógica de etiquetas
-
-sin instrucción explícita
+* debe ser acotado
+* debe tener objetivo único
 
 ---
 
-## 9. Codex
+## 7. Codex
 
-Codex debe:
+Codex:
 
-- seguir comportamiento actual
-- no “mejorar” lógica por su cuenta
-- no refactorizar sin instrucción
-
-Siempre:
-
-- mostrar diff
-- no aplicar cambios automáticos
+* NO refactoriza sin instrucción
+* NO inventa lógica
+* SOLO ejecuta cambios definidos
 
 ---
 
-## 10. Seguridad
-
-Si un cambio:
-
-- no está claro
-- toca múltiples capas
-- cambia flujo operativo
-
-→ detener
-
----
-
-## 11. Regla final
+## 8. Regla final
 
 El sistema debe ser:
 
-- predecible
-- explícito
-- estable
-
-No “inteligente”
+* determinístico
+* consistente
+* predecible

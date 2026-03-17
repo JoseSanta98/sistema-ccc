@@ -1,218 +1,126 @@
-# Arquitectura del Sistema CCC
+# Arquitectura del Sistema CCC (Estado Actual)
 
 ## Estado del sistema
 
-El sistema CCC se encuentra en operación estable en planta.
+Sistema en producción estable.
 
-No está en fase de diseño ni de blindaje.
-Está en una etapa de:
+Se encuentra en fase de:
 
-- mantenimiento controlado
-- evolución incremental
-- reducción de deuda técnica
+* mantenimiento controlado
+* evolución incremental
+* reducción de deuda técnica
 
-El sistema funciona y no debe reescribirse.
+El sistema NO requiere reescritura.
 
 ---
 
 ## Estructura actual
 
-### 1. UI (Interfaz)
+### 1. UI
 
 Archivos:
-- main_ui.py
-- dialogs.py
-- admin_panel.py
-- styles.py
+
+* main_ui.py
+* dialogs.py
+* admin_panel.py
 
 Responsabilidad:
-- interacción con el usuario
-- renderizado
-- control de flujo inmediato
 
-Estado real:
-- contiene lógica de negocio parcial
-- accede directamente a DB y hardware
+* interacción con usuario
+* control de flujo
+* representación del estado
+
+Estado:
+
+* ya no contiene lógica crítica de dominio duplicada
+* delega operaciones a servicios
 
 ---
 
 ### 2. Servicios
 
 Archivos:
-- box_service.py
-- piece_service.py
-- product_service.py
+
+* box_service.py
+* piece_service.py
+* product_service.py
 
 Responsabilidad:
-- encapsular reglas de negocio
-- validar operaciones
 
-Estado real:
-- conviven con lógica duplicada en UI y DB
-- no son única fuente de verdad
+* encapsular reglas de negocio
+* ser única fuente de verdad del dominio
+
+Estado:
+
+* ya son punto único de operación
+* no existe duplicidad activa con DB o UI
 
 ---
 
-### 3. Dominio (implícito)
+### 3. Dominio
 
-Archivos:
-- box_domain.py
-- lógica distribuida en servicios y UI
+Estado:
 
-Responsabilidad:
-- definir reglas del sistema
+* definido implícitamente pero consistente
+* centralizado en servicios
 
-Estado real:
-- distribuido
-- no centralizado
-- parcialmente duplicado
+Dominios:
+
+#### SINIIGA
+
+* identidad única
+* generación determinística:
+  01 + YYDDD + XXXX
+* búsqueda por últimos 4 dígitos
+
+#### Caja
+
+* creación y cierre solo vía BoxService
+* uso de transacciones (BEGIN IMMEDIATE)
+
+#### Producto
+
+* controlado por ProductService
+* estado ACTIVO/INACTIVO consistente
 
 ---
 
 ### 4. Infraestructura
 
 Archivos:
-- db_manager.py
-- hardware.py
-- tools/schema.sql
+
+* db_manager.py
+* hardware.py
 
 Responsabilidad:
-- persistencia
-- impresión / hardware
 
-Estado real:
-- DB contiene validaciones de negocio
-- hardware contiene lógica operativa
+* persistencia
+* impresión
 
----
+Estado:
 
-## Modelo de datos (resumen)
-
-- Canal (SINIIGA)
-- Caja (contenedor)
-- Pieza (registro de peso)
-- Producto (catálogo)
-
-Relaciones:
-
-- Canal → Cajas
-- Caja → Piezas
+* DB sin lógica de dominio
+* hardware aislado
 
 ---
 
-## Dominio SINIIGA (estado real)
+## Arquitectura final
 
-SINIIGA es la identidad principal del sistema.
+UI → Services → DB
 
-Estado actual en código:
-
-- Se almacena como `TEXT UNIQUE`
-- Puede contener sufijo de lote (`-DDMMYY`)
-- Se manipula en múltiples capas
-
-Uso actual:
-
-- UI:
-  - generación parcial (4 dígitos → prefijo + lote)
-  - display con split("-")
-
-- DB:
-  - normalización parcial (zfill, prefijo 08)
-
-- Hardware:
-  - uso de últimos 4 dígitos
-  - impresión parcial
-
-Conclusión:
-
-SINIIGA:
-- es clave única en DB
-- su construcción no está centralizada
-- su representación varía por capa
-
----
-
-## Estados del sistema
-
-### Canal
-- ACTIVO
-- CERRADO
-
-### Caja
-- ABIERTA
-- CERRADA
-
-Validación:
-
-- definida en DB (CHECK parcial)
-- replicada en servicios
-- usada en UI
-
----
-
-## Flujo operativo
-
-1. Selección / creación de canal
-2. Creación / selección de caja
-3. Registro de piezas
-4. Cierre de caja
-5. Impresión
-
-El flujo está distribuido entre:
-
-- UI
-- servicios
-- DB
-- hardware
-
----
-
-## Realidad actual (importante)
-
-El sistema presenta:
-
-- lógica duplicada
-- reglas distribuidas
-- acoplamiento UI ↔ DB ↔ hardware
-
-Esto es conocido y controlado.
-
-No se corrige de forma masiva.
+No existen rutas paralelas.
 
 ---
 
 ## Principios actuales
 
-- No romper comportamiento existente
-- Cambios incrementales
-- Cambios con impacto controlado
-- No introducir lógica implícita
-- No cambiar dominio sin definirlo primero
+* una sola fuente de verdad por dominio
+* lógica fuera de UI
+* DB solo persistencia
+* cambios incrementales
 
 ---
 
-## Evolución permitida
+## Estado final
 
-Se permite:
-
-- refactor incremental
-- eliminación de duplicidad
-- centralización de reglas
-
-No se permite:
-
-- reescritura total
-- cambios invisibles
-- cambios sin validación funcional
-
----
-
-## Regla clave
-
-Si un cambio:
-
-- modifica comportamiento sin evidencia
-- altera identidad (SINIIGA)
-- afecta flujo de planta
-
-→ No se implementa
+Sistema consistente, estable y alineado a dominio.
