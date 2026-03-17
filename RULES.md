@@ -1,118 +1,162 @@
-# Reglas de trabajo del Sistema CCC
+# Reglas de Trabajo – Sistema CCC
 
-Este archivo define las reglas operativas para modificar el sistema CCC.
-Su objetivo es **reducir riesgo**, **evitar regresiones** y **mantener
-consistencia**, no frenar el desarrollo.
+Estas reglas controlan cómo se modifica el sistema.
 
-Estas reglas derivan directamente de `ARCHITECTURE.md`.
+Aplican especialmente al uso de Codex.
 
 ---
 
-## 1. Regla fundamental
-El sistema CCC **funciona en producción**.
+## 1. Regla principal
 
-Por lo tanto:
-- Ningún cambio debe alterar comportamiento sin validación explícita.
-- La estabilidad tiene prioridad sobre la elegancia del código.
+El sistema está en producción.
 
----
+Todo cambio debe:
 
-## 2. Regla de alcance de cambios
-Un cambio debe cumplir **una sola intención clara**.
-
-- ❌ No mezclar refactor con cambios funcionales
-- ❌ No mezclar UI + DB + hardware en un mismo cambio
-- ✅ Un objetivo = un commit
+- mantener comportamiento existente
+- ser predecible
+- ser verificable
 
 ---
 
-## 3. Zonas críticas (alto riesgo)
-Estas zonas **no deben modificarse** sin confirmación explícita:
+## 2. Cambios
 
-- `hardware.py` (ZPL, impresión, báscula)
-- Esquema de base de datos (`schema.sql`)
-- Estados y semántica de tablas (ABIERTA, CERRADA, ACTIVA, etc.)
-- Flujo operativo visible en planta
-- Semántica visual industrial (colores/estados)
+Cada cambio debe:
 
----
+- tener un objetivo único
+- ser entendible
+- ser reversible
 
-## 4. Reglas de UI y estilos (SSOT)
+No permitido:
 
-### Fuente de verdad
-`styles.py` es la **única fuente autorizada** de valores visuales.
-
-Incluye:
-- Colores
-- Tipografías
-- Tamaños
-- QSS global
-- Estados visuales
-
-### Permitido
-- Uso de `setStyleSheet()` local **solo** si consume estilos definidos en `styles.py`
-- Cambios de estado visual (error, activo, selección) usando estilos existentes
-
-### No permitido
-- Hardcodear colores, fuentes o tamaños nuevos en UI
-- Introducir valores visuales nuevos fuera de `styles.py`
-
-### Nota importante
-La deuda visual existente fuera de `styles.py` se acepta como **deuda conocida**
-y no debe corregirse salvo refactor planificado.
+- cambios mezclados
+- cambios implícitos
+- cambios sin evidencia
 
 ---
 
-## 5. Reglas de arquitectura
-- La UI no contiene SQL, ZPL ni lógica de hardware
-- La UI no decide reglas de negocio complejas
-- La orquestación de flujos debe ser explícita y legible
-- Las reglas de negocio deben tender a ser funciones puras
+## 3. Dominio
+
+El sistema tiene reglas ya implementadas.
+
+Se debe:
+
+- respetar comportamiento actual
+- no modificar reglas sin instrucción explícita
+
+Importante:
+
+- existen transformaciones de SINIIGA en el sistema
+- estas no deben cambiarse sin definición previa
 
 ---
 
-## 6. Reglas de refactor
-- Refactors deben ser:
-  - incrementales
-  - reversibles
-  - con comportamiento idéntico
-- No refactorizar múltiples flujos en un solo cambio
-- Cada refactor debe poder explicarse en una frase clara
+## 4. Transformaciones
+
+Permitido:
+
+- usar transformaciones existentes
+
+No permitido:
+
+- crear nuevas transformaciones sin validación
+- modificar lógica de identidad
 
 ---
 
-## 7. Archivos legacy / históricos
-Algunos archivos existen solo como referencia histórica.
+## 5. UI
 
-Ejemplo:
-- `numeros de productos en caja, hardware.py`
+La UI actualmente:
 
-Reglas:
-- No usar estos archivos como base para nuevos cambios
-- No sincronizar comportamiento con ellos
-- No refactorizarlos
+- contiene lógica de negocio
+- accede a DB
+- accede a hardware
 
----
+Esto se acepta como estado actual.
 
-## 8. Uso de Codex / herramientas automáticas
-Al usar Codex u otras herramientas automáticas:
+No se debe:
 
-- Mostrar siempre el diff antes de aplicar cambios
-- No aceptar cambios que violen estas reglas
-- No permitir refactors agresivos o implícitos
-- Priorizar cambios pequeños y controlados
+- aumentar acoplamiento
+- duplicar más lógica
 
 ---
 
-## 9. Regla de salida segura
-Si existe duda sobre el impacto de un cambio:
+## 6. Servicios
 
-- Detener el cambio
-- Documentar la duda
-- Resolver antes de continuar
+Los servicios:
+
+- validan reglas
+- no son única fuente de verdad
+
+No se debe:
+
+- asumir que toda lógica está ahí
+- mover lógica sin validar impacto
 
 ---
 
-## 10. Regla final
-Si un cambio genera miedo o no se entiende con claridad,
-**todavía no es el momento de implementarlo**.
+## 7. DB
+
+La base de datos:
+
+- contiene validaciones reales
+- protege integridad
+
+No se debe:
+
+- eliminar validaciones
+- cambiar constraints sin análisis
+
+---
+
+## 8. Hardware
+
+HardwareManager:
+
+- es crítico para operación
+- impacta directamente planta
+
+No se modifica:
+
+- formato de impresión
+- lógica de etiquetas
+
+sin instrucción explícita
+
+---
+
+## 9. Codex
+
+Codex debe:
+
+- seguir comportamiento actual
+- no “mejorar” lógica por su cuenta
+- no refactorizar sin instrucción
+
+Siempre:
+
+- mostrar diff
+- no aplicar cambios automáticos
+
+---
+
+## 10. Seguridad
+
+Si un cambio:
+
+- no está claro
+- toca múltiples capas
+- cambia flujo operativo
+
+→ detener
+
+---
+
+## 11. Regla final
+
+El sistema debe ser:
+
+- predecible
+- explícito
+- estable
+
+No “inteligente”

@@ -1,207 +1,218 @@
 # Arquitectura del Sistema CCC
 
-## Estado actual
-El sistema CCC es funcional y estable en operación, pero ha evolucionado
-mediante parches incrementales, lo que incrementó el acoplamiento interno
-y el miedo a modificar partes que ya funcionan.
+## Estado del sistema
 
-Este documento define la arquitectura conceptual del sistema y un plan
-de evolución **sin cambiar comportamiento**.
+El sistema CCC se encuentra en operación estable en planta.
 
----
+No está en fase de diseño ni de blindaje.
+Está en una etapa de:
 
-## Objetivos
-- Reducir el riesgo percibido al modificar el sistema
-- Mejorar la comprensión estructural del código
-- Permitir refactors incrementales y reversibles
-- Mantener compatibilidad total con operación actual
+- mantenimiento controlado
+- evolución incremental
+- reducción de deuda técnica
+
+El sistema funciona y no debe reescribirse.
 
 ---
 
-## Principios no negociables
-- No cambiar comportamiento visible al operario
-- No modificar lógica de impresión (ZPL / hardware.py) sin validación explícita
-- No modificar esquema de base de datos ni estados existentes
-- No mezclar cambios estructurales con cambios funcionales
-- Un cambio = un objetivo = un commit
+## Estructura actual
 
----
+### 1. UI (Interfaz)
 
-## Semántica operativa del sistema (importante)
-El sistema CCC se utiliza en entorno industrial.  
-Por lo tanto, **los elementos visuales no son decoración**, sino
-**señales operativas para el operario**.
-
-Ejemplos de semántica visual:
-- Verde: correcto / listo / continuar
-- Rojo: peligro / stop / acción inválida
-- Amarillo: advertencia / atención / revisión
-- Azul: selección activa / contexto actual
-
-Cualquier cambio visual debe respetar esta semántica para evitar errores
-humanos en operación.
-
----
-
-## Arquitectura conceptual por capas (futura)
-
-### 1. Presentación (UI)
-Responsabilidad:
-- Renderizado de pantallas
-- Captura de eventos
-- Feedback visual al operario
-
-Archivos actuales:
+Archivos:
 - main_ui.py
 - dialogs.py
 - admin_panel.py
 - styles.py
 
-Regla:
-La UI no contiene SQL, ZPL ni lógica de hardware.
+Responsabilidad:
+- interacción con el usuario
+- renderizado
+- control de flujo inmediato
+
+Estado real:
+- contiene lógica de negocio parcial
+- accede directamente a DB y hardware
 
 ---
 
-### 2. Aplicación / Casos de uso
+### 2. Servicios
+
+Archivos:
+- box_service.py
+- piece_service.py
+- product_service.py
+
 Responsabilidad:
-- Orquestar flujos de negocio
-- Definir el orden de operaciones
+- encapsular reglas de negocio
+- validar operaciones
 
-Ejemplos de flujos:
-- Abrir SINIIGA
-- Seleccionar caja
-- Registrar pieza
-- Cerrar caja
-- Reimpresión
-
-Estado actual:
-Esta lógica vive embebida dentro de archivos de UI.
+Estado real:
+- conviven con lógica duplicada en UI y DB
+- no son única fuente de verdad
 
 ---
 
-### 3. Dominio (reglas de negocio)
+### 3. Dominio (implícito)
+
+Archivos:
+- box_domain.py
+- lógica distribuida en servicios y UI
+
 Responsabilidad:
-- Reglas puras del negocio
-- Validaciones
-- Políticas de cálculo
+- definir reglas del sistema
 
-Ejemplos:
-- Corrección de peso
-- Validación de estados
-- Normalización SINIIGA
-
-Estado actual:
-Disperso entre UI, dialogs y db_manager.
+Estado real:
+- distribuido
+- no centralizado
+- parcialmente duplicado
 
 ---
 
 ### 4. Infraestructura
+
+Archivos:
+- db_manager.py
+- hardware.py
+- tools/schema.sql
+
 Responsabilidad:
-- Implementaciones concretas de tecnología
+- persistencia
+- impresión / hardware
 
-Componentes:
-- db_manager.py (SQLite)
-- hardware.py (báscula + impresora)
-- config.ini
-- schema.sql
-
----
-
-### 5. Bootstrap
-Responsabilidad:
-- Arranque del sistema
-- Wiring de dependencias
-- Manejo de fallos fatales
-
-Archivo actual:
-- main.py
+Estado real:
+- DB contiene validaciones de negocio
+- hardware contiene lógica operativa
 
 ---
 
-## Qué NO se toca (zona de riesgo alto)
-- Lógica ZPL y envío a impresora
-- Esquema y estados de base de datos
-- Flujo operativo visible en planta
-- Semántica visual industrial vigente
-- Formato actual de configuración
+## Modelo de datos (resumen)
+
+- Canal (SINIIGA)
+- Caja (contenedor)
+- Pieza (registro de peso)
+- Producto (catálogo)
+
+Relaciones:
+
+- Canal → Cajas
+- Caja → Piezas
 
 ---
 
-## Single Source of Truth (SSOT)
+## Dominio SINIIGA (estado real)
 
-### Estilos y apariencia visual
-`styles.py` es la **única fuente autorizada** de definición visual del sistema.
+SINIIGA es la identidad principal del sistema.
 
-Incluye:
-- Colores
-- Tipografías
-- Tamaños visuales
-- QSS global
-- Estados visuales (activo, abierto, cerrado, error)
+Estado actual en código:
 
-Reglas:
-- No se deben introducir valores visuales nuevos fuera de `styles.py`.
-- `setStyleSheet()` local está permitido **solo** si consume estilos definidos en `styles.py`.
-- No se permite hardcodear colores, fuentes o tamaños nuevos en archivos de UI.
-- Si un estilo no existe, se define primero en `styles.py`.
+- Se almacena como `TEXT UNIQUE`
+- Puede contener sufijo de lote (`-DDMMYY`)
+- Se manipula en múltiples capas
 
-Objetivo:
-- Evitar divergencia visual
-- Permitir cambios de diseño sin miedo
-- Mantener consistencia operativa
+Uso actual:
 
----
+- UI:
+  - generación parcial (4 dígitos → prefijo + lote)
+  - display con split("-")
 
-## Excepciones permitidas (importante)
-- Se permite el uso de `setStyleSheet()` local para:
-  - activar/desactivar estados
-  - mostrar errores temporales
-  - feedback inmediato de operación
-- Siempre que:
-  - no introduzca valores visuales nuevos
-  - consuma constantes o estilos de `styles.py`
+- DB:
+  - normalización parcial (zfill, prefijo 08)
 
-La deuda visual existente fuera de `styles.py` se considera **deuda conocida**
-y no se tratará como violación hasta refactor planificado.
+- Hardware:
+  - uso de últimos 4 dígitos
+  - impresión parcial
+
+Conclusión:
+
+SINIIGA:
+- es clave única en DB
+- su construcción no está centralizada
+- su representación varía por capa
 
 ---
 
-## Archivos históricos / legacy
-Existen archivos que no forman parte del flujo activo del sistema, pero se
-conservan como referencia histórica.
+## Estados del sistema
 
-Ejemplo:
-- `numeros de productos en caja, hardware.py`
+### Canal
+- ACTIVO
+- CERRADO
 
-Reglas:
-- Estos archivos no deben ser usados como base para nuevos cambios.
-- No representan el comportamiento actual del sistema.
-- Su presencia es documental, no operativa.
+### Caja
+- ABIERTA
+- CERRADA
 
----
+Validación:
 
-## Plan de evolución (incremental y reversible)
-
-### Fase 1 — Diagnóstico
-✔ Completado  
-Mapa de responsabilidades y acoplamientos.
-
-### Fase 2 — Arquitectura conceptual
-✔ Completado  
-Este documento.
-
-### Fase 3 — Refactor invisible (futuro)
-- Extracción de funciones puras
-- Separación de casos de uso
-- Sin cambio de comportamiento
-
-### Fase 4 — Mejora controlada (opcional)
-- Simplificación
-- Reducción de duplicidad
-- Mejora de testabilidad
+- definida en DB (CHECK parcial)
+- replicada en servicios
+- usada en UI
 
 ---
 
-## Regla de oro
-Si un cambio no puede explicarse en una frase clara,
-entonces todavía no es seguro implementarlo.
+## Flujo operativo
+
+1. Selección / creación de canal
+2. Creación / selección de caja
+3. Registro de piezas
+4. Cierre de caja
+5. Impresión
+
+El flujo está distribuido entre:
+
+- UI
+- servicios
+- DB
+- hardware
+
+---
+
+## Realidad actual (importante)
+
+El sistema presenta:
+
+- lógica duplicada
+- reglas distribuidas
+- acoplamiento UI ↔ DB ↔ hardware
+
+Esto es conocido y controlado.
+
+No se corrige de forma masiva.
+
+---
+
+## Principios actuales
+
+- No romper comportamiento existente
+- Cambios incrementales
+- Cambios con impacto controlado
+- No introducir lógica implícita
+- No cambiar dominio sin definirlo primero
+
+---
+
+## Evolución permitida
+
+Se permite:
+
+- refactor incremental
+- eliminación de duplicidad
+- centralización de reglas
+
+No se permite:
+
+- reescritura total
+- cambios invisibles
+- cambios sin validación funcional
+
+---
+
+## Regla clave
+
+Si un cambio:
+
+- modifica comportamiento sin evidencia
+- altera identidad (SINIIGA)
+- afecta flujo de planta
+
+→ No se implementa
