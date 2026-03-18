@@ -40,7 +40,7 @@ class MainUI(QMainWindow):
         super().__init__()
         self.config = config
         self.setWindowTitle("SISTEMA DE ETIQUETADO TIF - V4.1")
-        self.resize(1280, 850)
+        self.setMinimumSize(900, 600)
         self.setStyleSheet(styles.MAIN_STYLESHEET)
         
         self.db = DatabaseManager()

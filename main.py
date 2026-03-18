@@ -5,7 +5,8 @@ import traceback
 from pathlib import Path
 from datetime import datetime # FIX: Importación añadida
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtCore import QTimer
+from PySide6.QtGui import QFontDatabase, QGuiApplication
 
 try:
     from main_ui import MainUI
@@ -18,6 +19,23 @@ except Exception as e:
 CONFIG_FILE = "config.ini"
 BASE_DIR = Path(__file__).resolve().parent
 FONT_PATH = BASE_DIR / "assets" / "DS-DIGI.TTF"
+
+def apply_smart_geometry(window):
+    screen = window.screen() or QGuiApplication.primaryScreen()
+    if screen is None:
+        return
+
+    available_geometry = screen.availableGeometry()
+    target_width = max(window.minimumWidth(), int(available_geometry.width() * 0.92))
+    target_height = max(window.minimumHeight(), int(available_geometry.height() * 0.92))
+
+    target_width = min(target_width, available_geometry.width())
+    target_height = min(target_height, available_geometry.height())
+
+    x = available_geometry.x() + (available_geometry.width() - target_width) // 2
+    y = available_geometry.y() + (available_geometry.height() - target_height) // 2
+
+    window.setGeometry(x, y, target_width, target_height)
 
 def load_config():
     config = configparser.ConfigParser()
@@ -44,6 +62,7 @@ def main():
     try:
         window = MainUI(config)
         window.show()
+        QTimer.singleShot(0, lambda: apply_smart_geometry(window))
         sys.exit(app.exec())
     except Exception:
         error_msg = traceback.format_exc()
