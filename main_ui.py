@@ -112,6 +112,21 @@ class MainUI(QMainWindow):
         lv = QVBoxLayout(left_w)
         lv.setContentsMargins(15, 15, 15, 15)
         lv.setSpacing(12)
+
+        self.lbl_contexto_activo = QLabel()
+        self.lbl_contexto_activo.setObjectName("LblContextoActivo")
+        self.lbl_contexto_activo.setStyleSheet(
+            "font-size: 18px; "
+            "font-weight: bold; "
+            "color: black; "
+            "background-color: #f0f0f0; "
+            "border: 2px solid #cfcfcf; "
+            "border-radius: 6px; "
+            "padding: 10px;"
+        )
+        self.lbl_contexto_activo.setWordWrap(True)
+        lv.addWidget(self.lbl_contexto_activo)
+        self.update_active_context_label()
         
         kf = QFrame()
         kf.setObjectName("KpiPanel")
@@ -302,6 +317,7 @@ class MainUI(QMainWindow):
                 self.lbl_prod_name.setText("NO ENCONTRADO")
             self.btn_print.setEnabled(False)
             self.txt_prod.selectAll()
+        self.update_active_context_label()
 
     def _calcular_peso_final(self):
         txt_w = self.txt_weight.text().strip()
@@ -371,6 +387,7 @@ class MainUI(QMainWindow):
         self.lbl_prod_name.setText("LISTO - ESCANEE PRODUCTO")
         self.lbl_prod_name.setStyleSheet("color: #000;")
         self.btn_print.setEnabled(False)
+        self.update_active_context_label()
         self.txt_prod.setFocus()
 
     def save_and_print_piece(self):
@@ -461,6 +478,7 @@ class MainUI(QMainWindow):
             data = d.selected_siniiga
             self.state.current_canal = self.db.buscar_o_crear_canal(data['texto']) if 'nuevo' in data else data
             self.state.current_box = None
+            self.state.current_product = None
             self.refresh_context()
 
     def open_new_box_flow(self):
@@ -477,6 +495,7 @@ class MainUI(QMainWindow):
         if not box_data:
             return
         self.state.current_box = box_data
+        self.state.current_product = None
         self.highlight_buttons(box_data['numero_caja'])
         self.refresh_table()
         self.txt_prod.setEnabled(True)
@@ -484,6 +503,7 @@ class MainUI(QMainWindow):
         self.lbl_prod_name.setText("LISTO - ESCANEE PRODUCTO")
         self.txt_prod.setFocus()
         self.txt_weight.clear()
+        self.update_active_context_label()
 
     def highlight_buttons(self, num):
         tgt = f"CAJA {num}"
@@ -511,6 +531,24 @@ class MainUI(QMainWindow):
         
         self._rebuild_box_buttons(cajas_ab)
         self._sync_selected_box(cajas_ab)
+        self.update_active_context_label()
+
+    def update_active_context_label(self):
+        siniiga_actual = "---"
+        if self.state.current_canal:
+            siniiga_actual = self.state.current_canal.get('siniiga', '---').split("-")[0]
+
+        caja_actual = "---"
+        if self.state.current_box:
+            caja_actual = str(self.state.current_box.get('numero_caja', '---'))
+
+        producto_actual = "---"
+        if self.state.current_product:
+            producto_actual = self.state.current_product.get('nombre', '---')
+
+        self.lbl_contexto_activo.setText(
+            f"SINIIGA: {siniiga_actual} | CAJA: {caja_actual} | PROD: {producto_actual}"
+        )
 
     def _rebuild_box_buttons(self, cajas_ab):
         while self.box_layout.count():
@@ -537,6 +575,7 @@ class MainUI(QMainWindow):
             self.btn_print.setEnabled(False)
             self.txt_prod.setEnabled(False)
             self.lbl_prod_name.setText("⚠️ SELECCIONE CAJA")
+            self.update_active_context_label()
             return
 
         still = next((c for c in cajas_ab if c['id'] == self.state.current_box['id']), None)
