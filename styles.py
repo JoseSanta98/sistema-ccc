@@ -5,6 +5,8 @@ COLOR_BACKGROUND = "#e6e6e6"       # Gris Claro de fondo
 COLOR_TEXT_MAIN = "#000000"        # Negro Puro
 COLOR_BOX_OPEN = "#28a745"         # Verde
 COLOR_BOX_ACTIVE = "#3399ff"       # Azul
+COLOR_BOX_CLOSED = "#9e9e9e"       # Gris
+COLOR_BOX_NEW = "#f5f5f5"          # Gris muy claro para acción
 COLOR_BTN_DANGER = "#dc3545"       # Rojo
 COLOR_BTN_WARN = "#ffc107"         # Amarillo
 COLOR_BTN_PRINT = "#005bb5"        # Azul Fuerte
@@ -150,3 +152,5 @@ QPushButton#BtnClose {{ background-color: {COLOR_BTN_DANGER}; color: white; bord
 
 STYLE_BOX_ACTIVE = f"background-color: {COLOR_BOX_ACTIVE}; color: black; border: 4px solid black; font-weight: 900;"
 STYLE_BOX_OPEN = f"background-color: {COLOR_BOX_OPEN}; color: black; border: 2px solid #145523; border-bottom: 4px solid #0f3d19;"
+STYLE_BOX_CLOSED = f"background-color: {COLOR_BOX_CLOSED}; color: #1f1f1f; border: 2px solid #666666; border-bottom: 4px solid #555555;"
+STYLE_BOX_NEW = f"background-color: {COLOR_BOX_NEW}; color: black; border: 2px dashed #6c8ebf;"
