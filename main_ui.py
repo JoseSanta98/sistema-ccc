@@ -82,9 +82,10 @@ class MainUI(QMainWindow):
         th.setContentsMargins(10, 10, 10, 10)
         th.setSpacing(15)
         
-        self.btn_sin = QPushButton("SINIIGA: ---\nClic para iniciar")
+        self.btn_sin = QPushButton("SINIIGA: ---\nLOTE: ---\nCAJAS: 0 (0 ABIERTAS / 0 CERRADAS)")
         self.btn_sin.setObjectName("btnSiniiga")
         self.btn_sin.setFixedSize(260, 95)
+        self.btn_sin.setStyleSheet("text-align:left; padding:8px 10px;")
         self.btn_sin.clicked.connect(self.open_siniiga_flow)
         th.addWidget(self.btn_sin)
         
@@ -555,10 +556,13 @@ class MainUI(QMainWindow):
         
         num_ab = sum(1 for c in cajas_canal if c['estado'] == ESTADO_ABIERTA)
         num_ce = sum(1 for c in cajas_canal if c['estado'] == ESTADO_CERRADA)
-        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} ABIERTAS / {num_ce} CERRADAS)"
+        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} A / {num_ce} C)"
         
         self.btn_sin.setText(header)
-        self.btn_sin.setStyleSheet("background-color:#28a745; color:black; border:3px solid #1e7e34; text-align:left; padding-left:10px; font-size:14px; font-weight:bold;")
+        self.btn_sin.setStyleSheet(
+            "background-color:#28a745; color:black; border:3px solid #1e7e34; "
+            "text-align:left; padding:8px 10px; font-size:14px; font-weight:bold;"
+        )
         
         self._rebuild_box_buttons(cajas_canal)
         self._sync_selected_box(cajas_canal)
@@ -584,7 +588,10 @@ class MainUI(QMainWindow):
 
     def _build_box_button(self, caja_data):
         if caja_data['estado'] == ESTADO_CERRADA:
-            btn_text = f"CAJA {caja_data['numero_caja']}"
+            total_piezas = 0
+            if 'total_piezas' in caja_data.keys() and caja_data['total_piezas'] is not None:
+                total_piezas = caja_data['total_piezas']
+            btn_text = f"CAJA {caja_data['numero_caja']}\nCERRADA\n{total_piezas} pzas."
         else:
             btn_text = f"CAJA {caja_data['numero_caja']}\n{caja_data['peso_acumulado']:.1f}kg"
 

@@ -218,7 +218,11 @@ class DatabaseManager:
         conn = self._get_conn()
         st_filter = "" if incluir_cerradas else "AND c.estado='ABIERTA'"
         query = f"""
-        SELECT c.*, COUNT(p.id) as num_piezas, COALESCE(SUM(p.peso), 0) as peso_acumulado
+        SELECT
+            c.*,
+            COUNT(p.id) as num_piezas,
+            COUNT(p.id) as total_piezas,
+            COALESCE(SUM(p.peso), 0) as peso_acumulado
         FROM cajas c
         LEFT JOIN piezas p ON p.caja_id = c.id
         WHERE c.canal_id = ? {st_filter}
