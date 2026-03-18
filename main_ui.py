@@ -36,6 +36,8 @@ class SessionState:
 
 
 class MainUI(QMainWindow):
+    BOX_BUTTON_SIZE = (125, 80)
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -526,7 +528,18 @@ class MainUI(QMainWindow):
         tgt = f"CAJA {num}"
         for i in range(self.box_layout.count()):
             w = self.box_layout.itemAt(i).widget()
-            if isinstance(w, QPushButton) and "CAJA" in w.text():
+            if not isinstance(w, QPushButton):
+                continue
+
+            if w.property("box_action") == "new":
+                w.setStyleSheet(styles.STYLE_BOX_NEW)
+                continue
+
+            if w.property("box_estado") == ESTADO_CERRADA:
+                w.setStyleSheet(styles.STYLE_BOX_CLOSED)
+                continue
+
+            if "CAJA" in w.text():
                 if tgt in w.text().split('\n')[0]:
                     w.setStyleSheet(styles.STYLE_BOX_ACTIVE)
                 else:
@@ -537,18 +550,18 @@ class MainUI(QMainWindow):
             self.update_ui_state()
             return
         stats = self.db.get_resumen_canal(self.state.current_canal['id'])
-        cajas_ab = self.db.get_cajas_abiertas(self.state.current_canal['id'])
+        cajas_canal = self.db.get_all_cajas_canal(self.state.current_canal['id'])
         siniiga_display = self.state.current_canal['siniiga'].split("-")[0]
         
-        num_ab = len(cajas_ab)
-        num_ce = stats['total_cajas'] - num_ab
+        num_ab = sum(1 for c in cajas_canal if c['estado'] == ESTADO_ABIERTA)
+        num_ce = sum(1 for c in cajas_canal if c['estado'] == ESTADO_CERRADA)
         header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} ABIERTAS / {num_ce} CERRADAS)"
         
         self.btn_sin.setText(header)
         self.btn_sin.setStyleSheet("background-color:#28a745; color:black; border:3px solid #1e7e34; text-align:left; padding-left:10px; font-size:14px; font-weight:bold;")
         
-        self._rebuild_box_buttons(cajas_ab)
-        self._sync_selected_box(cajas_ab)
+        self._rebuild_box_buttons(cajas_canal)
+        self._sync_selected_box(cajas_canal)
         self.update_active_context_label()
         self.update_ui_state()
 
@@ -569,27 +582,49 @@ class MainUI(QMainWindow):
             f"SINIIGA: {siniiga_actual} | CAJA: {caja_actual} | PROD: {producto_actual}"
         )
 
-    def _rebuild_box_buttons(self, cajas_ab):
+    def _build_box_button(self, caja_data):
+        if caja_data['estado'] == ESTADO_CERRADA:
+            btn_text = f"CAJA {caja_data['numero_caja']}"
+        else:
+            btn_text = f"CAJA {caja_data['numero_caja']}\n{caja_data['peso_acumulado']:.1f}kg"
+
+        btn = QPushButton(btn_text)
+        btn.setProperty("class", "boxBtn")
+        btn.setProperty("box_estado", caja_data['estado'])
+        btn.setFixedSize(*self.BOX_BUTTON_SIZE)
+
+        if caja_data['estado'] == ESTADO_CERRADA:
+            btn.setStyleSheet(styles.STYLE_BOX_CLOSED)
+            btn.setEnabled(False)
+            return btn
+
+        btn.setStyleSheet(styles.STYLE_BOX_OPEN)
+        cid = caja_data['id']
+        btn.clicked.connect(lambda ch, cid=cid: self.select_box(self.db.get_caja_by_id(cid)))
+        return btn
+
+    def _build_new_box_button(self):
+        btn = QPushButton("NUEVA CAJA")
+        btn.setProperty("class", "boxBtn")
+        btn.setProperty("box_action", "new")
+        btn.setFixedSize(*self.BOX_BUTTON_SIZE)
+        btn.setStyleSheet(styles.STYLE_BOX_NEW)
+        btn.clicked.connect(self.open_new_box_flow)
+        return btn
+
+    def _rebuild_box_buttons(self, cajas_canal):
         while self.box_layout.count():
             it = self.box_layout.takeAt(0)
             w = it.widget()
             if w:
                 w.deleteLater()
 
-        for c in cajas_ab:
-            b = QPushButton(f"CAJA {c['numero_caja']}\n{c['peso_acumulado']:.1f}kg")
-            b.setProperty("class", "boxBtn")
-            b.setStyleSheet(styles.STYLE_BOX_OPEN)
-            cid = c['id']
-            b.clicked.connect(lambda ch, cid=cid: self.select_box(self.db.get_caja_by_id(cid)))
-            self.box_layout.addWidget(b)
+        for c in sorted(cajas_canal, key=lambda x: x['numero_caja']):
+            self.box_layout.addWidget(self._build_box_button(c))
 
-        add = QPushButton("+")
-        add.setFixedSize(65, 80)
-        add.clicked.connect(self.open_new_box_flow)
-        self.box_layout.addWidget(add)
+        self.box_layout.addWidget(self._build_new_box_button())
 
-    def _sync_selected_box(self, cajas_ab):
+    def _sync_selected_box(self, cajas_canal):
         if not self.state.current_box:
             self.btn_print.setEnabled(False)
             self.txt_prod.setEnabled(False)
@@ -597,7 +632,13 @@ class MainUI(QMainWindow):
             self.update_active_context_label()
             return
 
-        still = next((c for c in cajas_ab if c['id'] == self.state.current_box['id']), None)
+        still = next(
+            (
+                c for c in cajas_canal
+                if c['id'] == self.state.current_box['id'] and c['estado'] == ESTADO_ABIERTA
+            ),
+            None
+        )
         if still:
             self.select_box(self.db.get_caja_by_id(still['id']))
         else:
