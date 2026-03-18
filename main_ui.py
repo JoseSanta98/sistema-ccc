@@ -556,7 +556,7 @@ class MainUI(QMainWindow):
         
         num_ab = sum(1 for c in cajas_canal if c['estado'] == ESTADO_ABIERTA)
         num_ce = sum(1 for c in cajas_canal if c['estado'] == ESTADO_CERRADA)
-        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} ABIERTAS / {num_ce} CERRADAS)"
+        header = f"SINIIGA: {siniiga_display}\nLOTE: {self.state.current_canal['lote_dia']}\nCAJAS: {stats['total_cajas']} ({num_ab} A / {num_ce} C)"
         
         self.btn_sin.setText(header)
         self.btn_sin.setStyleSheet(
