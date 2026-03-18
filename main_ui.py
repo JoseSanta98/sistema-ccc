@@ -57,6 +57,7 @@ class MainUI(QMainWindow):
         self.tm_demo = None
         
         self.init_ui()
+        self.update_ui_state()
         # Sincronizar estado inicial (esto llamará a update_scale_ui)
         self.toggle_scale(False) 
         
@@ -242,6 +243,17 @@ class MainUI(QMainWindow):
         l.addWidget(val)
         return l
 
+    def update_ui_state(self):
+        has_canal = self.state.current_canal is not None
+        has_box = self.state.current_box is not None
+        has_product = self.state.current_product is not None
+
+        self.txt_prod.setEnabled(has_box)
+        self.txt_weight.setEnabled(has_box and has_product)
+        self.btn_print.setEnabled(has_box and has_product)
+        self.btn_cls.setEnabled(has_box)
+        self.table.setEnabled(has_box)
+
     # =========================================================================
     # HARDWARE (BÁSCULA)
     # =========================================================================
@@ -318,6 +330,7 @@ class MainUI(QMainWindow):
             self.btn_print.setEnabled(False)
             self.txt_prod.selectAll()
         self.update_active_context_label()
+        self.update_ui_state()
 
     def _calcular_peso_final(self):
         txt_w = self.txt_weight.text().strip()
@@ -372,6 +385,7 @@ class MainUI(QMainWindow):
         self.refresh_table()
         self.update_stats()
         self.highlight_buttons(self.state.current_box['numero_caja'])
+        self.update_ui_state()
 
         if self.scale_active:
             self.txt_weight.setFocus()
@@ -388,6 +402,7 @@ class MainUI(QMainWindow):
         self.lbl_prod_name.setStyleSheet("color: #000;")
         self.btn_print.setEnabled(False)
         self.update_active_context_label()
+        self.update_ui_state()
         self.txt_prod.setFocus()
 
     def save_and_print_piece(self):
@@ -480,6 +495,7 @@ class MainUI(QMainWindow):
             self.state.current_box = None
             self.state.current_product = None
             self.refresh_context()
+            self.update_ui_state()
 
     def open_new_box_flow(self):
         if not self.state.current_canal:
@@ -504,6 +520,7 @@ class MainUI(QMainWindow):
         self.txt_prod.setFocus()
         self.txt_weight.clear()
         self.update_active_context_label()
+        self.update_ui_state()
 
     def highlight_buttons(self, num):
         tgt = f"CAJA {num}"
@@ -517,6 +534,7 @@ class MainUI(QMainWindow):
 
     def refresh_context(self):
         if not self.state.current_canal:
+            self.update_ui_state()
             return
         stats = self.db.get_resumen_canal(self.state.current_canal['id'])
         cajas_ab = self.db.get_cajas_abiertas(self.state.current_canal['id'])
@@ -532,6 +550,7 @@ class MainUI(QMainWindow):
         self._rebuild_box_buttons(cajas_ab)
         self._sync_selected_box(cajas_ab)
         self.update_active_context_label()
+        self.update_ui_state()
 
     def update_active_context_label(self):
         siniiga_actual = "---"
