@@ -162,7 +162,7 @@ class MainUI(QMainWindow):
         
         lv.addWidget(QLabel("1. CÓDIGO PRODUCTO:"))
         self.txt_prod = QLineEdit()
-        self.txt_prod.returnPressed.connect(self.logic_validate_product)
+        self.txt_prod.returnPressed.connect(self._on_product_enter)
         self.txt_prod.textChanged.connect(self.update_operational_status)
         lv.addWidget(self.txt_prod)
         
@@ -359,6 +359,9 @@ border-radius: 6px;
     def _buscar_producto(self, code):
         return self.product_service.get_producto_activo(code)
 
+    def _on_product_enter(self):
+        QTimer.singleShot(0, self.logic_validate_product)
+
     def logic_validate_product(self):
         code = self.txt_prod.text().strip()
         if not code:
@@ -387,7 +390,8 @@ border-radius: 6px;
         self.update_ui_state()
         self.update_operational_status()
         if producto_valido:
-            QTimer.singleShot(0, lambda: (self.txt_weight.setFocus(), self.txt_weight.selectAll()))
+            self.txt_weight.setFocus()
+            self.txt_weight.selectAll()
 
     def _calcular_peso_final(self, mostrar_errores=True):
         txt_w = self.txt_weight.text().strip()
