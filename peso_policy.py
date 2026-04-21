@@ -2,7 +2,6 @@ class PesoInvalidoError(Exception):
     pass
 
 class PesoConfig:
-    CORRECCION_BASCULA = -0.02
     MIN_PIEZA = 0.01
     MIN_CIERRE = 0.10
     MAX_CIERRE = 100.00
@@ -13,14 +12,14 @@ class PesoConfig:
 def _redondear(valor: float) -> float:
     return round(valor, PesoConfig.DECIMALES)
 
-def calcular_peso_pieza(raw: float, aplicar_correccion: bool) -> float:
+def calcular_peso_pieza(raw: float, aplicar_correccion: bool, tara: float = 0.00) -> float:
     if raw <= 0:
         raise PesoInvalidoError(f"Peso de pieza inválido: {raw}")
 
     peso = raw
 
-    if aplicar_correccion:
-        candidato = raw + PesoConfig.CORRECCION_BASCULA
+    if aplicar_correccion and tara != 0.00:
+        candidato = raw + tara
         if candidato > 0:
             peso = candidato
 
