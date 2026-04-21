@@ -16,16 +16,18 @@ Todo cambio debe:
 
 ## 2. Dominio
 
-* cada dominio tiene UNA fuente de verdad:
+Cada dominio tiene UNA fuente de verdad:
 
-  * SINIIGA → UI controlada
-  * Caja → BoxService
-  * Producto → ProductService
+* SINIIGA → UI controlada
+* Caja → BoxService
+* Producto → ProductService
+* Peso → peso_policy.py
 
 No permitido:
 
 * duplicar lógica
 * crear rutas paralelas
+* llamar DB directo desde UI para operaciones de negocio
 
 ---
 
@@ -40,6 +42,7 @@ No debe:
 
 * implementar lógica de negocio
 * duplicar validaciones
+* llamar db_manager directamente para escrituras
 
 ---
 
@@ -49,6 +52,11 @@ Los servicios:
 
 * contienen la lógica del sistema
 * son punto único de operación
+
+Regla de cierre de caja:
+
+* si no imprime → no cierra
+* la impresión ocurre dentro de la transacción, antes del commit
 
 ---
 

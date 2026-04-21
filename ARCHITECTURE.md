@@ -8,7 +8,6 @@ Se encuentra en fase de:
 
 * mantenimiento controlado
 * evolución incremental
-* reducción de deuda técnica
 
 El sistema NO requiere reescritura.
 
@@ -32,8 +31,9 @@ Responsabilidad:
 
 Estado:
 
-* ya no contiene lógica crítica de dominio duplicada
-* delega operaciones a servicios
+* no contiene lógica crítica de dominio
+* delega todas las operaciones de escritura a servicios
+* no llama DB directo para operaciones de negocio
 
 ---
 
@@ -52,8 +52,9 @@ Responsabilidad:
 
 Estado:
 
-* ya son punto único de operación
+* punto único de operación
 * no existe duplicidad activa con DB o UI
+* cierre de caja con atomicidad real: impresión dentro de transacción
 
 ---
 
@@ -61,7 +62,7 @@ Estado:
 
 Estado:
 
-* definido implícitamente pero consistente
+* definido y consistente
 * centralizado en servicios
 
 Dominios:
@@ -69,19 +70,26 @@ Dominios:
 #### SINIIGA
 
 * identidad única
-* generación determinística:
-  01 + YYDDD + XXXX
+* generación determinística: 01 + YYDDD + XXXX
 * búsqueda por últimos 4 dígitos
 
 #### Caja
 
 * creación y cierre solo vía BoxService
-* uso de transacciones (BEGIN IMMEDIATE)
+* transacciones BEGIN IMMEDIATE
+* cierre garantiza impresión antes de commit
+* si impresión falla → rollback → caja queda ABIERTA
 
 #### Producto
 
 * controlado por ProductService
 * estado ACTIVO/INACTIVO consistente
+
+#### Peso
+
+* política centralizada en peso_policy.py
+* PesoConfig contiene todos los parámetros configurables
+* calcular_peso_pieza() y resolver_peso_cierre() usados en flujo principal
 
 ---
 
@@ -95,12 +103,12 @@ Archivos:
 Responsabilidad:
 
 * persistencia
-* impresión
+* impresión y báscula
 
 Estado:
 
 * DB sin lógica de dominio
-* hardware aislado
+* hardware.py retorna (bool, str) consistentemente en todos los métodos de impresión
 
 ---
 
@@ -117,7 +125,7 @@ No existen rutas paralelas.
 * una sola fuente de verdad por dominio
 * lógica fuera de UI
 * DB solo persistencia
-* cambios incrementales
+* cambios incrementales y acotados
 
 ---
 
