@@ -76,10 +76,3 @@ class BoxService:
             raise
         finally:
             conn.close()
-
-def reabrir_caja(db, caja):
-    if not puede_reabrir_caja(caja['estado']):
-        return False
-
-    db.reabrir_caja(caja['id'])
-    return True
