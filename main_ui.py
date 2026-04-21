@@ -742,7 +742,7 @@ border-radius: 6px;
             return
         pid = self.table.item(r, 0).data(Qt.UserRole)
         if QMessageBox.question(self, "Borrar", "¿Eliminar registro?") == QMessageBox.Yes:
-            self.db.borrar_pieza(pid)
+            self.piece_service.borrar_pieza(pid)
             self.state.current_box = self.db.get_caja_by_id(self.state.current_box['id'])
             self.refresh_context()
             self.refresh_table()
