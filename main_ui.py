@@ -363,13 +363,14 @@ border-radius: 6px;
         code = self.txt_prod.text().strip()
         if not code:
             return
+        producto_valido = False
         p = self._buscar_producto(code)
         if p:
             self.state.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
             self.lbl_prod_name.setStyleSheet("color:#008000;")
             self.btn_print.setEnabled(True)
-            self.txt_weight.setFocus()
+            producto_valido = True
             if not self.scale_active:
                 self.txt_weight.clear()
         else:
@@ -385,6 +386,8 @@ border-radius: 6px;
         self.update_active_context_label()
         self.update_ui_state()
         self.update_operational_status()
+        if producto_valido:
+            QTimer.singleShot(0, lambda: (self.txt_weight.setFocus(), self.txt_weight.selectAll()))
 
     def _calcular_peso_final(self, mostrar_errores=True):
         txt_w = self.txt_weight.text().strip()
