@@ -15,7 +15,7 @@ from box_domain import (
     puede_cerrar_caja,
     puede_reabrir_caja
 )
-from box_service import BoxService, reabrir_caja
+from box_service import BoxService
 from piece_service import PieceService
 from product_service import ProductService
 
@@ -433,7 +433,7 @@ class AdminPanel(QDialog):
         box_fresh = self.db.get_caja_by_id(bid)
         if puede_reabrir_caja(box_fresh['estado']):
             if QMessageBox.question(self, "Reabrir", "¿Reabrir caja?") == QMessageBox.Yes:
-                reabrir_caja(self.db, box_fresh)
+                self.box_service.reabrir_caja(box_fresh)
                 box_fresh = self.db.get_caja_by_id(bid)
             else: return
         self.box_to_open_in_main = box_fresh
@@ -457,7 +457,7 @@ class AdminPanel(QDialog):
                 peso_final
             )
         elif box_fresh['estado'] == ESTADO_CERRADA:
-            reabrir_caja(self.db, box_fresh)
+            self.box_service.reabrir_caja(box_fresh)
         else:
             return
 
