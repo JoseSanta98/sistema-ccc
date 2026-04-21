@@ -22,6 +22,21 @@ class BoxService:
                 conn.rollback()
                 raise ValueError("La caja no tiene contenido")
 
+            try:
+                ok_print, _msg_print = self.hw_mgr.print_master(
+                    dict(caja),
+                    canal,
+                    contenido,
+                    peso_manual_override=peso_final,
+                )
+            except Exception:
+                conn.rollback()
+                raise RuntimeError("Error de impresión. La caja no fue cerrada.")
+
+            if not ok_print:
+                conn.rollback()
+                raise RuntimeError("Error de impresión. La caja no fue cerrada.")
+
             self.db.cerrar_caja_conn(conn, caja_id)
             conn.commit()
         except Exception:
@@ -29,17 +44,6 @@ class BoxService:
             raise
         finally:
             conn.close()
-
-        try:
-            self.hw_mgr.print_master(
-                dict(caja),
-                canal,
-                contenido,
-                peso_manual_override=peso_final,
-            )
-        except Exception as exc:
-            self.db.reabrir_caja(caja_id)
-            raise RuntimeError("Error de impresión, caja reabierta") from exc
 
         return True
 

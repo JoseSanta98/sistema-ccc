@@ -193,53 +193,61 @@ class HardwareManager:
         return self.send_raw_zpl(zpl)
 
     def print_master(self, caja_data, canal_data, contenido_piezas, peso_manual_override=None):
-        if peso_manual_override is None:
-            raise ValueError("peso_manual_override no puede ser None")
+        try:
+            if peso_manual_override is None:
+                return False, "peso_manual_override no puede ser None"
 
-        empresa = "CENTRAL COMERCIALIZADORA DE CARNES SA DE CV"
-        fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
+            empresa = "CENTRAL COMERCIALIZADORA DE CARNES SA DE CV"
+            fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
 
-        peso_final = peso_manual_override
+            peso_final = peso_manual_override
 
-        piezas = len(contenido_piezas)
-        siniiga_display = canal_data["siniiga"].split("-")[0]
+            piezas = len(contenido_piezas)
+            siniiga_display = canal_data["siniiga"].split("-")[0]
 
-        nombres = set([p["nombre_producto"] for p in contenido_piezas])
-        if len(nombres) > 1:
-            producto_visual, especie_visual = "MULTIPRODUCTO", "VARIOS"
-        else:
-            producto_visual = (
-                contenido_piezas[0]["nombre_producto"] if contenido_piezas else "VACIA"
+            nombres = set([p["nombre_producto"] for p in contenido_piezas])
+            if len(nombres) > 1:
+                producto_visual, especie_visual = "MULTIPRODUCTO", "VARIOS"
+            else:
+                producto_visual = (
+                    contenido_piezas[0]["nombre_producto"] if contenido_piezas else "VACIA"
+                )
+                especie_visual = "CORTE PRIMARIO"
+
+            caja_padded = str(caja_data["numero_caja"]).zfill(2)
+            peso_barcode = int(peso_final * 100)
+            barcode_caja = f"M{canal_data['lote_dia']}{caja_padded}{peso_barcode:04d}"
+
+            zpl = "^XA^PW480^LL768^CI28"
+            zpl += "^FO425,20^A0R,20,20^FB728,1,0,C,0^FD" + empresa + "^FS"
+            zpl += "^FO365,20^A0R,50,50^FB728,1,0,C,0^FD" + producto_visual + "^FS"
+            zpl += (
+                "^FO325,20^A0R,25,25^FB728,1,0,C,0^FD"
+                + especie_visual
+                + "  |  "
+                + fecha_actual
+                + "^FS"
             )
-            especie_visual = "CORTE PRIMARIO"
+            zpl += "^FO310,20^GB0,728,3^FS"
+            zpl += "^FO90,410^GB220,0,3^FS"
+            zpl += "^FO275,40^A0R,30,30^FDCAJA No.^FS"
+            zpl += "^FO215,220^A0R,85,85^FD" + caja_padded + "^FS"
+            zpl += "^FO275,430^A0R,28,28^FDLOTE: " + canal_data["lote_dia"] + "^FS"
+            zpl += "^FO235,430^A0R,25,25^FDSINIIGA: " + siniiga_display + "^FS"
+            zpl += "^FO200,20^GB0,728,2^FS"
+            zpl += "^FO165,40^A0R,30,30^FDPESO NETO:^FS"
+            zpl += "^FO115,160^A0R,50,50^FD" + f"{peso_final:.2f} Kg.^FS"
 
-        caja_padded = str(caja_data["numero_caja"]).zfill(2)
-        peso_barcode = int(peso_final * 100)
-        barcode_caja = f"M{canal_data['lote_dia']}{caja_padded}{peso_barcode:04d}"
+            # CAMBIO CONGELADO: NO IMPRIMIR CANTIDAD / PZAS (ZPL ELIMINADO)
 
-        zpl = "^XA^PW480^LL768^CI28"
-        zpl += "^FO425,20^A0R,20,20^FB728,1,0,C,0^FD" + empresa + "^FS"
-        zpl += "^FO365,20^A0R,50,50^FB728,1,0,C,0^FD" + producto_visual + "^FS"
-        zpl += (
-            "^FO325,20^A0R,25,25^FB728,1,0,C,0^FD"
-            + especie_visual
-            + "  |  "
-            + fecha_actual
-            + "^FS"
-        )
-        zpl += "^FO310,20^GB0,728,3^FS"
-        zpl += "^FO90,410^GB220,0,3^FS"
-        zpl += "^FO275,40^A0R,30,30^FDCAJA No.^FS"
-        zpl += "^FO215,220^A0R,85,85^FD" + caja_padded + "^FS"
-        zpl += "^FO275,430^A0R,28,28^FDLOTE: " + canal_data["lote_dia"] + "^FS"
-        zpl += "^FO235,430^A0R,25,25^FDSINIIGA: " + siniiga_display + "^FS"
-        zpl += "^FO200,20^GB0,728,2^FS"
-        zpl += "^FO165,40^A0R,30,30^FDPESO NETO:^FS"
-        zpl += "^FO115,160^A0R,50,50^FD" + f"{peso_final:.2f} Kg.^FS"
+            zpl += "^FO90,20^GB0,728,3^FS"
+            zpl += "^FO25,120^BCR,60,Y,N,N^FD" + barcode_caja + "^FS"
+            zpl += "^XZ"
 
-        # CAMBIO CONGELADO: NO IMPRIMIR CANTIDAD / PZAS (ZPL ELIMINADO)
+            ok, msg = self.send_raw_zpl(zpl)
+            if not ok:
+                return False, msg
 
-        zpl += "^FO90,20^GB0,728,3^FS"
-        zpl += "^FO25,120^BCR,60,Y,N,N^FD" + barcode_caja + "^FS"
-        zpl += "^XZ"
-        return self.send_raw_zpl(zpl)
+            return True, ""
+        except Exception as e:
+            return False, f"Error imprimiendo MASTER: {e}"
