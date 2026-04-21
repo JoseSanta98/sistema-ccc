@@ -11,36 +11,32 @@ class BoxService:
     def cerrar_caja(self, caja_id, canal, contenido, peso_final):
         conn = self.db._get_conn()
         conn.execute("BEGIN IMMEDIATE")
+        _committed = False
 
         try:
             caja = conn.execute("SELECT * FROM cajas WHERE id=?", (caja_id,)).fetchone()
             if not caja or caja["estado"] != "ABIERTA":
-                conn.rollback()
                 raise ValueError("Caja inexistente o no abierta")
 
             if not contenido:
-                conn.rollback()
                 raise ValueError("La caja no tiene contenido")
 
-            try:
-                ok_print, _msg_print = self.hw_mgr.print_master(
-                    dict(caja),
-                    canal,
-                    contenido,
-                    peso_manual_override=peso_final,
-                )
-            except Exception:
-                conn.rollback()
-                raise RuntimeError("Error de impresión. La caja no fue cerrada.")
+            ok_print, _msg_print = self.hw_mgr.print_master(
+                dict(caja),
+                canal,
+                contenido,
+                peso_manual_override=peso_final,
+            )
 
             if not ok_print:
-                conn.rollback()
                 raise RuntimeError("Error de impresión. La caja no fue cerrada.")
 
             self.db.cerrar_caja_conn(conn, caja_id)
             conn.commit()
+            _committed = True
         except Exception:
-            conn.rollback()
+            if not _committed:
+                conn.rollback()
             raise
         finally:
             conn.close()
