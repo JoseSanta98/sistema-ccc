@@ -120,7 +120,8 @@ class AdminPanel(QDialog):
         self.product_service = ProductService(self.db)
         self.piece_service = PieceService(self.db, self.product_service)
         self.hw = hardware.HardwareManager() 
-        self.hw_mgr = self.hw
+        if hasattr(self, "hw"):
+            self.hw_mgr = self.hw
         self.box_service = BoxService(self.db, self.hw_mgr)
         
         self.box_to_open_in_main = None
