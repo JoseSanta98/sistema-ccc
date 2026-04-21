@@ -131,6 +131,12 @@ class MainUI(QMainWindow):
         self.lbl_contexto_activo.setWordWrap(True)
         lv.addWidget(self.lbl_contexto_activo)
         self.update_active_context_label()
+
+        self.lbl_estado = QLabel()
+        self.lbl_estado.setObjectName("LblEstadoOperativo")
+        self.lbl_estado.setFixedHeight(50)
+        self.lbl_estado.setAlignment(Qt.AlignCenter)
+        lv.addWidget(self.lbl_estado)
         
         kf = QFrame()
         kf.setObjectName("KpiPanel")
@@ -157,6 +163,7 @@ class MainUI(QMainWindow):
         lv.addWidget(QLabel("1. CÓDIGO PRODUCTO:"))
         self.txt_prod = QLineEdit()
         self.txt_prod.returnPressed.connect(self.logic_validate_product)
+        self.txt_prod.textChanged.connect(self.update_operational_status)
         lv.addWidget(self.txt_prod)
         
         self.lbl_prod_name = QLabel("⚠️ SELECCIONE CAJA")
@@ -181,6 +188,7 @@ class MainUI(QMainWindow):
         self.txt_weight.setAlignment(Qt.AlignRight)
         self.txt_weight.setFixedHeight(125)
         self.txt_weight.returnPressed.connect(self.save_and_print_piece)
+        self.txt_weight.textChanged.connect(self.update_operational_status)
         lv.addWidget(self.txt_weight)
         
         self.btn_print = QPushButton("IMPRIMIR ETIQUETA")
@@ -256,6 +264,46 @@ class MainUI(QMainWindow):
         self.btn_print.setEnabled(has_box and has_product)
         self.btn_cls.setEnabled(has_box)
         self.table.setEnabled(has_box)
+        self.update_operational_status()
+
+    def update_operational_status(self):
+        if not self.state.current_canal:
+            estado = "SIN_CANAL"
+        elif not self.state.current_box:
+            estado = "SIN_CAJA"
+        elif not self.state.current_product:
+            estado = "SIN_PRODUCTO"
+        elif not self.txt_weight.text() or float(self.txt_weight.text() or 0) <= 0:
+            estado = "SIN_PESO"
+        else:
+            estado = "LISTO"
+
+        if estado == "SIN_CANAL":
+            texto = "Seleccione SINIIGA"
+            color = "#dc3545"
+        elif estado == "SIN_CAJA":
+            texto = "Seleccione una caja"
+            color = "#dc3545"
+        elif estado == "SIN_PRODUCTO":
+            texto = "Escanee o ingrese un producto"
+            color = "#ffc107"
+        elif estado == "SIN_PESO":
+            texto = "Ingrese el peso de la pieza"
+            color = "#ffc107"
+        else:
+            texto = "Listo para imprimir"
+            color = "#28a745"
+
+        self.lbl_estado.setStyleSheet(
+            f"""
+background-color: {color};
+color: black;
+font-weight: bold;
+font-size: 16px;
+border-radius: 6px;
+"""
+        )
+        self.lbl_estado.setText(texto)
 
     # =========================================================================
     # HARDWARE (BÁSCULA)
@@ -334,6 +382,7 @@ class MainUI(QMainWindow):
             self.txt_prod.selectAll()
         self.update_active_context_label()
         self.update_ui_state()
+        self.update_operational_status()
 
     def _calcular_peso_final(self):
         txt_w = self.txt_weight.text().strip()
@@ -404,6 +453,7 @@ class MainUI(QMainWindow):
         self.lbl_prod_name.setText("LISTO - ESCANEE PRODUCTO")
         self.lbl_prod_name.setStyleSheet("color: #000;")
         self.btn_print.setEnabled(False)
+        self.update_operational_status()
         self.update_active_context_label()
         self.update_ui_state()
         self.txt_prod.setFocus()
@@ -428,6 +478,7 @@ class MainUI(QMainWindow):
             return
 
         self._post_print_refresh()
+        self.update_operational_status()
 
     def _ejecutar_cierre_caja(self, peso_final, contenido):
         self.box_service.cerrar_caja(
@@ -549,6 +600,7 @@ class MainUI(QMainWindow):
     def refresh_context(self):
         if not self.state.current_canal:
             self.update_ui_state()
+            self.update_operational_status()
             return
         stats = self.db.get_resumen_canal(self.state.current_canal['id'])
         cajas_canal = self.db.get_all_cajas_canal(self.state.current_canal['id'])
@@ -568,6 +620,7 @@ class MainUI(QMainWindow):
         self._sync_selected_box(cajas_canal)
         self.update_active_context_label()
         self.update_ui_state()
+        self.update_operational_status()
 
     def update_active_context_label(self):
         siniiga_actual = "---"
