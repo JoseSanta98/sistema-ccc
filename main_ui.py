@@ -436,9 +436,6 @@ border-radius: 6px;
     def _validate_weight(self):
         return self._calcular_peso_final()
 
-    def _apply_weight_policy(self, final_w):
-        return final_w
-
     def _post_print_refresh(self):
         self.state.current_box = self.db.get_caja_by_id(self.state.current_box['id'])
         self.state.last_activity = datetime.datetime.now()
@@ -474,7 +471,6 @@ border-radius: 6px;
         if final_w is None:
             return
 
-        final_w = self._apply_weight_policy(final_w)
         if not puede_agregar_pieza(self.state.current_box['estado']):
             return
 
