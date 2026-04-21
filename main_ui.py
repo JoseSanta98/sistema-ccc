@@ -162,8 +162,7 @@ class MainUI(QMainWindow):
         
         lv.addWidget(QLabel("1. CÓDIGO PRODUCTO:"))
         self.txt_prod = QLineEdit()
-        self.txt_prod.returnPressed.connect(self._on_product_enter)
-        self.txt_prod.textChanged.connect(self.update_operational_status)
+        self.txt_prod.returnPressed.connect(self.logic_validate_product)
         lv.addWidget(self.txt_prod)
         
         self.lbl_prod_name = QLabel("⚠️ SELECCIONE CAJA")
@@ -359,21 +358,16 @@ border-radius: 6px;
     def _buscar_producto(self, code):
         return self.product_service.get_producto_activo(code)
 
-    def _on_product_enter(self):
-        QTimer.singleShot(0, self.logic_validate_product)
-
     def logic_validate_product(self):
         code = self.txt_prod.text().strip()
         if not code:
             return
-        producto_valido = False
         p = self._buscar_producto(code)
         if p:
             self.state.current_product = p
             self.lbl_prod_name.setText(p['nombre'])
             self.lbl_prod_name.setStyleSheet("color:#008000;")
             self.btn_print.setEnabled(True)
-            producto_valido = True
             if not self.scale_active:
                 self.txt_weight.clear()
         else:
@@ -389,9 +383,12 @@ border-radius: 6px;
         self.update_active_context_label()
         self.update_ui_state()
         self.update_operational_status()
-        if producto_valido:
-            self.txt_weight.setFocus()
-            self.txt_weight.selectAll()
+        if p:
+            QTimer.singleShot(0, self._focus_weight)
+
+    def _focus_weight(self):
+        self.txt_weight.setFocus()
+        self.txt_weight.selectAll()
 
     def _calcular_peso_final(self, mostrar_errores=True):
         txt_w = self.txt_weight.text().strip()
