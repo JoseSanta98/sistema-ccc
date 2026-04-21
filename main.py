@@ -43,12 +43,16 @@ def load_config():
         config['SISTEMA'] = {'MODO_DEMO': 'True'}
         config['HARDWARE'] = {
             'PRINTER_NAME': 'ZDesigner GC420t',
-            'SCALE_BAUDRATE': '9600'
+            'SCALE_BAUDRATE': '9600',
+            'TARA': '0.00'
         }
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
     else:
         config.read(CONFIG_FILE)
+        if not config.has_section('HARDWARE'):
+            config['HARDWARE'] = {}
+        config['HARDWARE']['TARA'] = str(config.getfloat('HARDWARE', 'TARA', fallback=0.00))
     return config
 
 def main():

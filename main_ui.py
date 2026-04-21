@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
     QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView, QSplitter, 
     QMessageBox, QFrame, QScrollArea, QComboBox, QCheckBox, QInputDialog,
-    QAbstractItemView
+    QAbstractItemView, QDoubleSpinBox
 )
 from PySide6.QtCore import Qt, QTimer
 
@@ -41,6 +41,7 @@ class MainUI(QMainWindow):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.tara_value = config.getfloat('HARDWARE', 'TARA', fallback=0.00)
         self.setWindowTitle("SISTEMA DE ETIQUETADO TIF - V4.1")
         self.setMinimumSize(900, 600)
         self.setStyleSheet(styles.MAIN_STYLESHEET)
@@ -173,12 +174,23 @@ class MainUI(QMainWindow):
         self.chk_lock_prod = QCheckBox("🔒 Fijo")
         self.chk_lock_prod.setObjectName("ChkIndustrial")
         
-        self.chk_apply_corr = QCheckBox("⚖️ Corr. -0.02")
+        self.chk_apply_corr = QCheckBox("⚖️ Tara")
         self.chk_apply_corr.setObjectName("ChkIndustrial")
         self.chk_apply_corr.setChecked(True)
+        self.spn_tara = QDoubleSpinBox()
+        self.spn_tara.setRange(-1.00, 1.00)
+        self.spn_tara.setDecimals(2)
+        self.spn_tara.setSingleStep(0.01)
+        self.spn_tara.setValue(self.tara_value)
+        self.spn_tara.setSuffix(" kg")
+        self.spn_tara.setFixedWidth(80)
+        self.spn_tara.setEnabled(self.chk_apply_corr.isChecked())
+        self.chk_apply_corr.toggled.connect(self.spn_tara.setEnabled)
+        self.spn_tara.valueChanged.connect(lambda v: setattr(self, 'tara_value', v))
         
         gl_opts.addWidget(self.chk_lock_prod)
         gl_opts.addWidget(self.chk_apply_corr)
+        gl_opts.addWidget(self.spn_tara)
         lv.addLayout(gl_opts)
         
         lv.addWidget(QLabel("2. PESO NETO (Kg):"))
@@ -403,9 +415,10 @@ border-radius: 6px;
             return None
 
         aplicar_correccion_checkbox = self.chk_apply_corr.isChecked()
+        tara = self.spn_tara.value() if self.chk_apply_corr.isChecked() else 0.00
 
         try:
-            peso_final = calcular_peso_pieza(raw_weight, aplicar_correccion_checkbox)
+            peso_final = calcular_peso_pieza(raw_weight, aplicar_correccion_checkbox, tara=tara)
         except PesoInvalidoError as e:
             if mostrar_errores:
                 QMessageBox.warning(self, "Error de peso", str(e))
