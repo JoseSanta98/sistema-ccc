@@ -267,15 +267,7 @@ class MainUI(QMainWindow):
         self.update_operational_status()
 
     def update_operational_status(self):
-        peso_valido = False
-        txt_w = self.txt_weight.text().strip()
-
-        try:
-            # Normalizar posible coma decimal
-            txt_w = txt_w.replace(",", ".")
-            peso_valido = float(txt_w) > 0
-        except Exception:
-            peso_valido = False
+        peso_valido = self._calcular_peso_final(mostrar_errores=False) is not None
 
         if not self.state.current_canal:
             estado = "SIN_CANAL"
@@ -394,7 +386,7 @@ border-radius: 6px;
         self.update_ui_state()
         self.update_operational_status()
 
-    def _calcular_peso_final(self):
+    def _calcular_peso_final(self, mostrar_errores=True):
         txt_w = self.txt_weight.text().strip()
         if not txt_w:
             return None
@@ -402,7 +394,8 @@ border-radius: 6px;
         try:
             raw_weight = float(txt_w)
         except ValueError:
-            QMessageBox.warning(self, "Peso", "Valor inválido.")
+            if mostrar_errores:
+                QMessageBox.warning(self, "Peso", "Valor inválido.")
             return None
 
         aplicar_correccion_checkbox = self.chk_apply_corr.isChecked()
@@ -410,7 +403,8 @@ border-radius: 6px;
         try:
             peso_final = calcular_peso_pieza(raw_weight, aplicar_correccion_checkbox)
         except PesoInvalidoError as e:
-            QMessageBox.warning(self, "Error de peso", str(e))
+            if mostrar_errores:
+                QMessageBox.warning(self, "Error de peso", str(e))
             return None
 
         return peso_final
