@@ -137,7 +137,7 @@ class MainUI(QMainWindow):
         kh = QHBoxLayout(kf)
         self.k_h = self.mk_kpi("PZAS HOY", "0")
         self.k_p = self.mk_kpi("PESO HOY", "0.0")
-        self.k_t = self.mk_kpi("INACTIVO", "00:00")
+        self.k_t = self.mk_kpi("CAJA ACTUAL", "0 pzas.")
         kh.addLayout(self.k_h)
         kh.addLayout(self.k_p)
         kh.addLayout(self.k_t)
@@ -705,9 +705,16 @@ class MainUI(QMainWindow):
         self.k_p.itemAt(1).widget().setText(f"{s['peso_hoy']:.1f} Kg")
 
     def update_kpis(self):
-        d = datetime.datetime.now() - self.state.last_activity
-        m, s = divmod(int(d.total_seconds()), 60)
-        self.k_t.itemAt(1).widget().setText(f"{m:02d}:{s:02d}")
+        self.update_stats()
+        if not self.state.current_box:
+            self.k_t.itemAt(1).widget().setText("-- pzas.")
+            return
+        piezas = (
+            self.state.current_box.get('num_piezas')
+            or self.state.current_box.get('total_piezas')
+            or 0
+        )
+        self.k_t.itemAt(1).widget().setText(f"{piezas} pzas.")
 
     def flow_open_admin(self):
         print("ADMIN CLICKED")
