@@ -1,4 +1,5 @@
 from box_domain import ESTADO_ABIERTA
+from peso_policy import PesoConfig
 
 
 class PieceService:
@@ -14,8 +15,8 @@ class PieceService:
         if caja["estado"] != ESTADO_ABIERTA:
             raise ValueError("La caja no está abierta")
 
-        if peso <= 0:
-            raise ValueError("El peso debe ser mayor a 0")
+        if peso < PesoConfig.MIN_PIEZA:
+            raise ValueError(f"El peso debe ser al menos {PesoConfig.MIN_PIEZA}")
 
         if not codigo_producto:
             raise ValueError("El código no puede estar vacío")
@@ -37,8 +38,8 @@ class PieceService:
         if caja["estado"] != ESTADO_ABIERTA:
             raise ValueError("La caja no está abierta")
 
-        if nuevo_peso <= 0:
-            raise ValueError("El peso debe ser mayor a 0")
+        if nuevo_peso < PesoConfig.MIN_PIEZA:
+            raise ValueError(f"El peso debe ser al menos {PesoConfig.MIN_PIEZA}")
 
         return self.db.editar_pieza(pieza_id, nuevo_peso)
 
