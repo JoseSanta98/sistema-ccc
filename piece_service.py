@@ -6,7 +6,7 @@ class PieceService:
         self.db = db_manager
         self.product_service = product_service
 
-    def registrar_pieza(self, caja_id, codigo_producto, nombre_producto, peso):
+    def registrar_pieza(self, caja_id, codigo_producto, peso):
         caja = self.db.get_caja_by_id(caja_id)
         if not caja:
             raise ValueError("Caja no existe")
@@ -20,12 +20,11 @@ class PieceService:
         if not codigo_producto:
             raise ValueError("El código no puede estar vacío")
 
-        if not nombre_producto:
-            raise ValueError("El nombre no puede estar vacío")
-
         producto = self.product_service.get_producto_activo(codigo_producto)
         if producto is None:
             raise ValueError("Producto inexistente o INACTIVO")
+
+        nombre_producto = producto["nombre"]
 
         return self.db.registrar_pieza(caja_id, codigo_producto, nombre_producto, peso)
 
