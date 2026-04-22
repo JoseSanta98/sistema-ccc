@@ -275,44 +275,18 @@ class DatabaseManager:
         conn.close()
 
     # --- 4. PIEZAS ---
-    def registrar_pieza(self, caja_id, codigo, nombre, peso):
-        conn = self._get_conn()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-            cursor = conn.cursor()
+    def registrar_pieza_conn(self, conn, caja_id, codigo, nombre, peso):
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(consecutivo) FROM piezas WHERE caja_id=?", (caja_id,))
+        res = cursor.fetchone()[0]
+        sig = (res + 1) if res else 1
 
-            cursor.execute("SELECT estado FROM cajas WHERE id=?", (caja_id,))
-            row = cursor.fetchone()
+        cursor.execute("""
+            INSERT INTO piezas (caja_id, codigo_producto, nombre_producto, peso, consecutivo)
+            VALUES (?, ?, ?, ?, ?)
+        """, (caja_id, codigo, nombre, peso, sig))
 
-            if not row:
-                raise ValueError("Caja no existe")
-
-            if row["estado"] != "ABIERTA":
-                raise ValueError("No se puede registrar pieza en caja cerrada")
-
-            if peso <= 0:
-                raise ValueError("Peso inválido")
-
-            cursor.execute("SELECT MAX(consecutivo) FROM piezas WHERE caja_id=?", (caja_id,))
-            res = cursor.fetchone()[0]
-            sig = (res + 1) if res else 1
-            cursor.execute("""
-                INSERT INTO piezas (caja_id, codigo_producto, nombre_producto, peso, consecutivo)
-                VALUES (?, ?, ?, ?, ?)
-            """, (caja_id, codigo, nombre, peso, sig))
-            new_id = cursor.lastrowid
-            conn.commit()
-            return sig, new_id
-        except sqlite3.IntegrityError as e:
-            conn.rollback()
-            if "UNIQUE constraint failed: piezas.caja_id, piezas.consecutivo" in str(e):
-                raise ValueError("Conflicto de consecutivo en la caja") from e
-            raise ValueError("Error de integridad al registrar pieza") from e
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
+        return sig, cursor.lastrowid
 
     def get_contenido_caja(self, caja_id):
         conn = self._get_conn()
@@ -326,87 +300,29 @@ class DatabaseManager:
         conn.close()
         return dict(row) if row else None
 
-    def editar_pieza(self, pieza_id, nuevo_peso):
-        conn = self._get_conn()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-            cursor = conn.cursor()
+    def editar_pieza_conn(self, conn, pieza_id, nuevo_peso):
+        conn.execute("UPDATE piezas SET peso=? WHERE id=?", (nuevo_peso, pieza_id))
+        caja_id = conn.execute(
+            "SELECT caja_id FROM piezas WHERE id=?", (pieza_id,)
+        ).fetchone()["caja_id"]
+        conn.execute("""
+            UPDATE cajas SET
+                peso_acumulado = (SELECT COALESCE(SUM(peso), 0) FROM piezas WHERE caja_id=?),
+                num_piezas     = (SELECT COUNT(*) FROM piezas WHERE caja_id=?)
+            WHERE id=?
+        """, (caja_id, caja_id, caja_id))
 
-            cursor.execute("SELECT caja_id, peso FROM piezas WHERE id=?", (pieza_id,))
-            pieza = cursor.fetchone()
-            if not pieza:
-                raise ValueError("Pieza no existe")
-
-            caja_id = pieza['caja_id']
-            cursor.execute("UPDATE piezas SET peso=? WHERE id=?", (nuevo_peso, pieza_id))
-
-            cursor.execute(
-                "SELECT COALESCE(SUM(peso), 0) as peso_total, COUNT(*) as total_piezas FROM piezas WHERE caja_id=?",
-                (caja_id,)
-            )
-            resumen = cursor.fetchone()
-            peso_total = float(resumen['peso_total']) if resumen else 0.0
-            total_piezas = int(resumen['total_piezas']) if resumen else 0
-
-            caja_cols = {r['name'] for r in conn.execute("PRAGMA table_info(cajas)").fetchall()}
-            if 'peso_acumulado' in caja_cols and 'num_piezas' in caja_cols:
-                cursor.execute(
-                    "UPDATE cajas SET peso_acumulado=?, num_piezas=? WHERE id=?",
-                    (peso_total, total_piezas, caja_id)
-                )
-            elif 'peso_acumulado' in caja_cols:
-                cursor.execute("UPDATE cajas SET peso_acumulado=? WHERE id=?", (peso_total, caja_id))
-            elif 'num_piezas' in caja_cols:
-                cursor.execute("UPDATE cajas SET num_piezas=? WHERE id=?", (total_piezas, caja_id))
-
-            conn.commit()
-            return True
-        except:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
-    def borrar_pieza(self, pieza_id):
-        conn = self._get_conn()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT caja_id FROM piezas WHERE id=?", (pieza_id,))
-            pieza = cursor.fetchone()
-            if not pieza:
-                raise ValueError("Pieza no existe")
-
-            caja_id = pieza['caja_id']
-            cursor.execute("DELETE FROM piezas WHERE id=?", (pieza_id,))
-
-            cursor.execute(
-                "SELECT COALESCE(SUM(peso), 0) as peso_total, COUNT(*) as total_piezas FROM piezas WHERE caja_id=?",
-                (caja_id,)
-            )
-            resumen = cursor.fetchone()
-            peso_total = float(resumen['peso_total']) if resumen else 0.0
-            total_piezas = int(resumen['total_piezas']) if resumen else 0
-
-            caja_cols = {r['name'] for r in conn.execute("PRAGMA table_info(cajas)").fetchall()}
-            if 'peso_acumulado' in caja_cols and 'num_piezas' in caja_cols:
-                cursor.execute(
-                    "UPDATE cajas SET peso_acumulado=?, num_piezas=? WHERE id=?",
-                    (peso_total, total_piezas, caja_id)
-                )
-            elif 'peso_acumulado' in caja_cols:
-                cursor.execute("UPDATE cajas SET peso_acumulado=? WHERE id=?", (peso_total, caja_id))
-            elif 'num_piezas' in caja_cols:
-                cursor.execute("UPDATE cajas SET num_piezas=? WHERE id=?", (total_piezas, caja_id))
-
-            conn.commit()
-            return True
-        except:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
+    def borrar_pieza_conn(self, conn, pieza_id):
+        caja_id = conn.execute(
+            "SELECT caja_id FROM piezas WHERE id=?", (pieza_id,)
+        ).fetchone()["caja_id"]
+        conn.execute("DELETE FROM piezas WHERE id=?", (pieza_id,))
+        conn.execute("""
+            UPDATE cajas SET
+                peso_acumulado = (SELECT COALESCE(SUM(peso), 0) FROM piezas WHERE caja_id=?),
+                num_piezas     = (SELECT COUNT(*) FROM piezas WHERE caja_id=?)
+            WHERE id=?
+        """, (caja_id, caja_id, caja_id))
 
     def get_estadisticas_generales(self):
         conn = self._get_conn()
