@@ -761,12 +761,14 @@ border-radius: 6px;
             return
         pid = self.table.item(r, 0).data(Qt.UserRole)
         p = self.db.get_pieza_by_id(pid)
-        self.hw_mgr.print_ticket(
+        ok, msg = self.hw_mgr.print_ticket(
             p,
             self.state.current_box,
             self.state.current_canal,
             {'nombre': p['nombre_producto'], 'codigo': p['codigo_producto'], 'especie': 'REIMP'}
         )
+        if not ok:
+            QMessageBox.warning(self, "Error de impresión", f"No se pudo reimprimir la etiqueta.\n{msg}")
 
     def update_stats(self):
         s = self.db.get_estadisticas_generales()
