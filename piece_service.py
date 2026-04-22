@@ -1,4 +1,4 @@
-from box_domain import ESTADO_ABIERTA
+from box_domain import ESTADO_ABIERTA, puede_agregar_pieza
 from peso_policy import PesoConfig
 
 
@@ -12,8 +12,8 @@ class PieceService:
         if not caja:
             raise ValueError("Caja no existe")
 
-        if caja["estado"] != ESTADO_ABIERTA:
-            raise ValueError("La caja no está abierta")
+        if not puede_agregar_pieza(caja["estado"]):
+            raise ValueError("El estado de la caja no permite esta operación")
 
         if peso < PesoConfig.MIN_PIEZA:
             raise ValueError(f"El peso debe ser al menos {PesoConfig.MIN_PIEZA}")
@@ -35,8 +35,8 @@ class PieceService:
             raise ValueError("Pieza no existe")
 
         caja = self.db.get_caja_by_id(pieza["caja_id"])
-        if caja["estado"] != ESTADO_ABIERTA:
-            raise ValueError("La caja no está abierta")
+        if not puede_agregar_pieza(caja["estado"]):
+            raise ValueError("El estado de la caja no permite esta operación")
 
         if nuevo_peso < PesoConfig.MIN_PIEZA:
             raise ValueError(f"El peso debe ser al menos {PesoConfig.MIN_PIEZA}")
@@ -49,7 +49,7 @@ class PieceService:
             raise ValueError("Pieza no existe")
 
         caja = self.db.get_caja_by_id(pieza["caja_id"])
-        if caja["estado"] != ESTADO_ABIERTA:
-            raise ValueError("La caja no está abierta")
+        if not puede_agregar_pieza(caja["estado"]):
+            raise ValueError("El estado de la caja no permite esta operación")
 
         return self.db.borrar_pieza(pieza_id)
