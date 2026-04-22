@@ -66,13 +66,6 @@ class ProductService:
     def activar_producto(self, codigo):
         self._set_estado(codigo, "ACTIVO")
 
-    # --- COMPATIBILIDAD CON CÓDIGO ACTUAL ---
-    def list_all(self, include_inactive=True):
-        return self.get_all_productos(incluir_inactivos=include_inactive)
-
-    def get(self, codigo):
-        return self.get_producto(codigo)
-
     def create(self, codigo, nombre, especie):
         codigo_limpio = self._validar_codigo(codigo)
         nombre_limpio = self._validar_texto(nombre, "nombre")
@@ -149,12 +142,6 @@ class ProductService:
             raise
         finally:
             conn.close()
-
-    def deactivate(self, codigo):
-        self.desactivar_producto(codigo)
-
-    def reactivate(self, codigo):
-        self.activar_producto(codigo)
 
     def delete_if_unused(self, codigo):
         codigo_limpio = self._validar_codigo(codigo)

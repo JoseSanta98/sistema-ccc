@@ -499,7 +499,7 @@ class AdminPanel(QDialog):
 
     def load_catalog(self):
         self.tbl_cat.setRowCount(0)
-        prods = self.product_service.list_all(include_inactive=True)
+        prods = self.product_service.get_all_productos(incluir_inactivos=True)
         for p in prods:
             r = self.tbl_cat.rowCount(); self.tbl_cat.insertRow(r)
             code_item = QTableWidgetItem(str(p['codigo']))
@@ -525,10 +525,10 @@ class AdminPanel(QDialog):
             return
 
         try:
-            if self.product_service.get(codigo):
-                self.product_service.update(codigo, self.inp_nom.text(), self.inp_esp.text())
+            if self.product_service.get_producto(codigo):
+                self.product_service.upsert_producto(codigo, self.inp_nom.text(), self.inp_esp.text())
             else:
-                self.product_service.create(codigo, self.inp_nom.text(), self.inp_esp.text())
+                self.product_service.upsert_producto(codigo, self.inp_nom.text(), self.inp_esp.text())
         except ValueError as e:
             QMessageBox.warning(self, "Aviso", str(e))
             return
