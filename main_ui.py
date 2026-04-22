@@ -430,7 +430,6 @@ border-radius: 6px;
         consec, pid = self.piece_service.registrar_pieza(
             self.state.current_box['id'],
             self.state.current_product['codigo'],
-            self.state.current_product['nombre'],
             final_w
         )
         return pid
