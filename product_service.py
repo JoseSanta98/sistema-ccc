@@ -66,52 +66,6 @@ class ProductService:
     def activar_producto(self, codigo):
         self._set_estado(codigo, "ACTIVO")
 
-    def create(self, codigo, nombre, especie):
-        codigo_limpio = self._validar_codigo(codigo)
-        nombre_limpio = self._validar_texto(nombre, "nombre")
-        especie_limpia = self._validar_texto(especie, "especie")
-
-        conn = self.db._get_conn()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-
-            if self._existe_producto_conn(conn, codigo_limpio):
-                raise ValueError(f"El producto '{codigo_limpio}' ya existe")
-
-            conn.execute(
-                "INSERT INTO productos (codigo, nombre, especie, estado) VALUES (?, ?, ?, 'ACTIVO')",
-                (codigo_limpio, nombre_limpio, especie_limpia),
-            )
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
-    def update(self, codigo_original, nuevo_nombre, nueva_especie):
-        codigo_limpio = self._validar_codigo(codigo_original)
-        nombre_limpio = self._validar_texto(nuevo_nombre, "nombre")
-        especie_limpia = self._validar_texto(nueva_especie, "especie")
-
-        conn = self.db._get_conn()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-
-            if not self._existe_producto_conn(conn, codigo_limpio):
-                raise ValueError(f"El producto '{codigo_limpio}' no existe")
-
-            conn.execute(
-                "UPDATE productos SET nombre=?, especie=? WHERE codigo=?",
-                (nombre_limpio, especie_limpia, codigo_limpio),
-            )
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
     def change_codigo(self, codigo_original, nuevo_codigo):
         codigo_original_limpio = self._validar_codigo(codigo_original)
         nuevo_codigo_limpio = self._validar_codigo(nuevo_codigo)
