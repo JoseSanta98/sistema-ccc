@@ -1,6 +1,6 @@
 import sqlite3
 
-from box_domain import puede_reabrir_caja
+from box_domain import ESTADO_ABIERTA, puede_cerrar_caja, puede_reabrir_caja
 
 
 class BoxService:
@@ -15,8 +15,8 @@ class BoxService:
 
         try:
             caja = conn.execute("SELECT * FROM cajas WHERE id=?", (caja_id,)).fetchone()
-            if not caja or caja["estado"] != "ABIERTA":
-                raise ValueError("Caja inexistente o no abierta")
+            if not caja or not puede_cerrar_caja(caja["estado"]):
+                raise ValueError("La caja no existe o no se puede cerrar")
 
             if not contenido:
                 raise ValueError("La caja no tiene contenido")
@@ -49,7 +49,7 @@ class BoxService:
 
         try:
             existe = conn.execute(
-                "SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='ABIERTA'",
+                f"SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='{ESTADO_ABIERTA}'",
                 (canal_id, numero_caja),
             ).fetchone()
             if existe:
@@ -65,7 +65,7 @@ class BoxService:
         except sqlite3.IntegrityError:
             conn.rollback()
             recuperada = conn.execute(
-                "SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='ABIERTA'",
+                f"SELECT id FROM cajas WHERE canal_id=? AND numero_caja=? AND estado='{ESTADO_ABIERTA}'",
                 (canal_id, numero_caja),
             ).fetchone()
             if recuperada:
