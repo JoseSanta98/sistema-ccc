@@ -25,6 +25,7 @@ from piece_service import PieceService
 import styles 
 import hardware
 from peso_policy import calcular_peso_pieza, calcular_peso_caja, PesoInvalidoError, resolver_peso_cierre
+from splash import splash, log_ok, log_warn, log_info, log_err
 
 
 class SessionState:
