@@ -7,6 +7,7 @@ from datetime import datetime # FIX: Importación añadida
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase, QGuiApplication
+from splash import splash, log_ok, log_warn, log_info, log_err
 
 try:
     from main_ui import MainUI
@@ -56,30 +57,47 @@ def load_config():
     return config
 
 def main():
-    app = QApplication(sys.argv)
-    
-    if FONT_PATH.exists():
-        QFontDatabase.addApplicationFont(str(FONT_PATH))
-    
-    config = load_config()
-    
+    splash()
+
     try:
+        log_info("Cargando configuración...")
+        config = load_config()
+        log_ok("Configuración cargada.")
+
+        log_info("Iniciando interfaz gráfica...")
+        app = QApplication(sys.argv)
+
+        if FONT_PATH.exists():
+            QFontDatabase.addApplicationFont(str(FONT_PATH))
+
+        log_info("Conectando base de datos...")
+        log_info("Detectando impresora...")
+
         window = MainUI(config)
+        log_ok("Base de datos lista.")
+        printer_name = config.get('HARDWARE', 'PRINTER_NAME', fallback='ZDesigner')
+        log_ok(f"Impresora detectada: {printer_name}")
         window.show()
+        log_ok("UI lista.")
         QTimer.singleShot(0, lambda: apply_smart_geometry(window))
-        sys.exit(app.exec())
-    except Exception:
+
+        exit_code = app.exec()
+        log_info("Cerrando aplicación.")
+        sys.exit(exit_code)
+    except Exception as e:
+        log_err(str(e))
         error_msg = traceback.format_exc()
         with open("error_log.txt", "a") as f:
             f.write(f"\n--- ERROR DE EJECUCION ({datetime.now()}) ---\n")
             f.write(error_msg)
-        
-        error_dialog = QMessageBox()
-        error_dialog.setIcon(QMessageBox.Critical)
-        error_dialog.setWindowTitle("Error Crítico")
-        error_dialog.setText("El programa se cerró inesperadamente.")
-        error_dialog.setDetailedText(error_msg)
-        error_dialog.exec()
+
+        if 'app' in locals():
+            error_dialog = QMessageBox()
+            error_dialog.setIcon(QMessageBox.Critical)
+            error_dialog.setWindowTitle("Error Crítico")
+            error_dialog.setText("El programa se cerró inesperadamente.")
+            error_dialog.setDetailedText(error_msg)
+            error_dialog.exec()
         sys.exit(1)
 
 if __name__ == "__main__":
