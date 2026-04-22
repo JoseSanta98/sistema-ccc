@@ -2,7 +2,7 @@ import os
 import sys
 import time
 
-VERSION    = "5.0"
+VERSION    = "5.0 (Stable)"
 BUILD_DATE = "2026-04-22"
 
 

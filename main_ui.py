@@ -43,7 +43,7 @@ class MainUI(QMainWindow):
         super().__init__()
         self.config = config
         self.tara_value = config.getfloat('HARDWARE', 'TARA', fallback=0.00)
-        self.setWindowTitle("SISTEMA DE ETIQUETADO TIF - V4.1")
+        self.setWindowTitle("Sistema CCC — Control de Cajas y Cortes v5.0")
         self.setMinimumSize(900, 600)
         self.setStyleSheet(styles.MAIN_STYLESHEET)
         
