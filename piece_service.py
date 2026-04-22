@@ -1,6 +1,6 @@
 import sqlite3
 
-from box_domain import ESTADO_ABIERTA, puede_agregar_pieza
+from box_domain import puede_agregar_pieza
 from peso_policy import PesoConfig
 
 
