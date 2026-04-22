@@ -2,6 +2,9 @@ import os
 import sys
 import time
 
+VERSION    = "5.0"
+BUILD_DATE = "2026-04-22"
+
 
 def _log(msg: str, nivel: str) -> None:
     colores = {
@@ -50,6 +53,7 @@ def splash() -> None:
     print("\033[96m\033[1m" + banner + "\033[0m")
     print("\033[97m\033[1m  Sistema CCC — Control de Cajas y Cortes\033[0m")
     print("\033[97m\033[1m  ──────────────────────────────────────────────\033[0m")
+    print(f"\033[90m  v{VERSION}  ·  {BUILD_DATE}\033[0m")
     log_info("Sistema iniciando...")
     time.sleep(0.2)
     log_info("Cargando módulos...")
