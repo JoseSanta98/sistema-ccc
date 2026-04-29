@@ -3,6 +3,8 @@ import sqlite3
 import os
 from datetime import datetime
 
+from box_domain import ESTADO_ABIERTA
+
 DB_FILE = "produccion_local.db"
 SCHEMA_FILE = "schema.sql"
 MIGRATIONS_DIR = os.path.join("tools", "migrations")
@@ -259,6 +261,12 @@ class DatabaseManager:
         conn.execute(
             "UPDATE cajas SET estado='CERRADA', fecha_cierre=CURRENT_TIMESTAMP WHERE id=?",
             (caja_id,)
+        )
+
+    def reabrir_caja_conn(self, conn, caja_id):
+        conn.execute(
+            "UPDATE cajas SET estado = ?, fecha_cierre = NULL WHERE id = ?",
+            (ESTADO_ABIERTA, caja_id)
         )
 
     def reabrir_caja(self, caja_id):

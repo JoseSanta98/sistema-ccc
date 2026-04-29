@@ -76,3 +76,17 @@ class BoxService:
             raise
         finally:
             conn.close()
+
+    def reabrir_caja(self, caja):
+        if not puede_reabrir_caja(caja['estado']):
+            raise ValueError("La caja no puede reabrirse en su estado actual.")
+        conn = self.db._get_conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            self.db.reabrir_caja_conn(conn, caja['id'])
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
