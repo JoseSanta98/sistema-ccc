@@ -419,7 +419,18 @@ class AdminPanel(QDialog):
         pieza = self.db.get_pieza_by_id(pid)
         if pieza:
             mock = {'nombre': pieza['nombre_producto'], 'codigo': pieza['codigo_producto'], 'especie': 'REIMP'}
-            self.hw.print_ticket(pieza, self.current_box_data, self.current_canal_data, mock)
+            ok, msg = self.hw.print_ticket(
+                pieza,
+                self.current_box_data,
+                self.current_canal_data,
+                mock,
+            )
+            if not ok:
+                QMessageBox.warning(
+                    self,
+                    "Error de impresión",
+                    f"No se pudo imprimir la etiqueta:\n{msg}",
+                )
 
     def action_reprint_master(self):
         if not self.current_box_data: return
@@ -427,7 +438,15 @@ class AdminPanel(QDialog):
         if piezas:
             info = f"Caja: {self.current_box_data['numero_caja']}\nPeso: {self.current_box_data['peso_acumulado']:.2f} kg\nPiezas: {len(piezas)}"
             if QMessageBox.question(self, "Reimprimir Master", f"{info}\n\n¿Confirmar?") == QMessageBox.Yes:
-                self.hw.print_master(self.current_box_data, self.current_canal_data, piezas)
+                ok, msg = self.hw.print_master(
+                    self.current_box_data, self.current_canal_data, piezas
+                )
+                if not ok:
+                    QMessageBox.warning(
+                        self,
+                        "Error de impresión",
+                        f"No se pudo imprimir el master:\n{msg}",
+                    )
 
     def action_jump_prod(self):
         bid = self.current_box_data['id']
@@ -451,12 +470,18 @@ class AdminPanel(QDialog):
                 QMessageBox.warning(self, "Aviso", "La caja no tiene piezas para cerrar.")
                 return
             peso_final = box_fresh['peso_acumulado']
-            self.box_service.cerrar_caja(
-                box_fresh['id'],
-                self.current_canal_data,
-                contenido,
-                peso_final
-            )
+            try:
+                self.box_service.cerrar_caja(
+                    box_fresh['id'],
+                    self.current_canal_data,
+                    contenido,
+                    peso_final
+                )
+            except RuntimeError as e:
+                QMessageBox.critical(
+                    self, "Error de cierre", f"No se pudo cerrar la caja:\n{e}"
+                )
+                return
         elif box_fresh['estado'] == ESTADO_CERRADA:
             self.box_service.reabrir_caja(box_fresh)
         else:
