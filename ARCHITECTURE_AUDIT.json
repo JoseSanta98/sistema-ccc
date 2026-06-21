@@ -1,4 +1,253 @@
 {
+    "capas": {
+        "UI": [
+            {
+                "archivo": "main_ui.py",
+                "elementos": [
+                    "funcion calcular_peso_final",
+                    "clase MainUI",
+                    "handlers de flujo: flow_open_siniiga, flow_new_box, flow_select_box",
+                    "handlers operativos: logic_validate_product, logic_save_print, logic_close_box",
+                    "render/estado UI: refresh_context, refresh_table, highlight_buttons"
+                ]
+            },
+            {
+                "archivo": "dialogs.py",
+                "elementos": [
+                    "clase SiniigaSelectorDialog",
+                    "clase BoxSelectorDialog"
+                ]
+            },
+            {
+                "archivo": "admin_panel.py",
+                "elementos": [
+                    "clase AdminPanel",
+                    "acciones admin de supervision/catalogo"
+                ]
+            },
+            {
+                "archivo": "styles.py",
+                "elementos": [
+                    "paleta de color",
+                    "MAIN_STYLESHEET",
+                    "estilos de botones/cajas"
+                ]
+            }
+        ],
+        "Application": [
+            {
+                "archivo": "box_service.py",
+                "elementos": [
+                    "cerrar_caja(db, hw_mgr, caja, canal, contenido, peso_final)",
+                    "reabrir_caja(db, caja)"
+                ],
+                "nota": "Es la capa de caso de uso expl\u00edcita actualmente implementada."
+            },
+            {
+                "archivo": "main_ui.py / admin_panel.py",
+                "elementos": [
+                    "orquestaciones a\u00fan embebidas en UI (guardar+imprimir pieza, cierre de caja con override, reapertura desde admin)"
+                ],
+                "nota": "Existe deuda: parte de Application sigue en UI."
+            }
+        ],
+        "Domain": [
+            {
+                "archivo": "box_domain.py",
+                "elementos": [
+                    "ESTADO_ABIERTA, ESTADO_CERRADA",
+                    "puede_agregar_pieza",
+                    "puede_cerrar_caja",
+                    "puede_reabrir_caja",
+                    "calcular_peso_caja"
+                ]
+            },
+            {
+                "archivo": "sin modulo dedicado",
+                "elementos": [
+                    "no hay dominio formal para SINIIGA",
+                    "no hay dominio formal para productos",
+                    "no hay dominio formal para politica de peso global"
+                ]
+            }
+        ],
+        "Infraestructura": [
+            {
+                "archivo": "db_manager.py",
+                "elementos": [
+                    "acceso SQLite",
+                    "queries SQL de productos/canales/cajas/piezas",
+                    "transacciones para registrar_pieza"
+                ]
+            },
+            {
+                "archivo": "hardware.py",
+                "elementos": [
+                    "ScaleWorker (serial)",
+                    "HardwareManager (impresora)",
+                    "renderizado/envio ZPL"
+                ]
+            },
+            {
+                "archivo": "tools/schema.sql",
+                "elementos": [
+                    "modelo de datos",
+                    "estados de tablas",
+                    "indices"
+                ]
+            },
+            {
+                "archivo": "main.py",
+                "elementos": [
+                    "bootstrap",
+                    "load_config",
+                    "arranque de MainUI"
+                ]
+            }
+        ]
+    },
+    "reglas_negocio": {
+        "Cajas": {
+            "reglas": [
+                "solo cajas ABIERTAS aceptan piezas",
+                "solo cajas ABIERTAS pueden cerrarse",
+                "solo cajas CERRADAS pueden reabrirse",
+                "al cerrar caja se imprime master y se marca CERRADA",
+                "numero sugerido de caja = max historico + 1",
+                "la UI reconoce 4 casos de numeracion: abierta, secuencia, salto, reutilizacion"
+            ],
+            "formalizacion": "Parcial: estado/cierre-reapertura formalizados en domain/application; numeracion inteligente sigue en UI"
+        },
+        "SINIIGA": {
+            "reglas": [
+                "modo introductor arma SINIIGA como 080000{4digitos}-{lote}",
+                "si no es introductor se usa input para buscar/crear canal",
+                "db_manager aplica normalizacion parcial con prefijo 08 y zfill"
+            ],
+            "formalizacion": "Dispersa entre dialogs.py y db_manager.py"
+        },
+        "Productos": {
+            "reglas": [
+                "no se imprime si el producto no existe en catalogo",
+                "el catalogo se administra por upsert/delete desde admin"
+            ],
+            "formalizacion": "Parcial: validacion operativa en UI, CRUD en infraestructura"
+        },
+        "Canal": {
+            "reglas": [
+                "estado ACTIVO/CERRADO",
+                "SINIIGA unico",
+                "toggle de archivado/reactivacion desde admin"
+            ],
+            "formalizacion": "Parcial: reglas base en schema+db, orquestacion en UI"
+        },
+        "PESO_limites": {
+            "reglas": [
+                "correccion manual -0.02 solo si raw_w > 0.02 y checkbox activo",
+                "peso final debe ser > 0",
+                "cierre de caja pide peso final con rango 0.1 a 20.0",
+                "print_master vuelve a decidir peso_final (override si > 0, si no suma calculada)"
+            ],
+            "formalizacion": "Dispersa entre UI y hardware"
+        }
+    },
+    "violaciones_arquitectura": {
+        "logica_negocio_en_UI": [
+            "correccion/validacion de peso en main_ui.py",
+            "validacion de producto para habilitar impresion en main_ui.py",
+            "regla de numeracion de caja en BoxSelectorDialog"
+        ],
+        "decisiones_directas_DB_en_UI": [
+            "MainUI usa DatabaseManager directamente en handlers",
+            "AdminPanel hace lecturas/escrituras DB directas",
+            "Dialogs decide acciones consultando DB directo"
+        ],
+        "logica_UI_en_dominio": [
+            "no se detecta logica de UI en box_domain.py ni box_service.py"
+        ],
+        "metodos_duplicados_o_reglas_duplicadas": [
+            "verificacion de estado de caja en UI y en servicio",
+            "calculo/decision de peso final repartido entre UI y hardware",
+            "normalizacion SINIIGA repartida entre dialogs y db_manager"
+        ]
+    },
+    "deuda_tecnica_puntos_ciegos": {
+        "main_ui.py": [
+            "riesgo de desincronizacion por m\u00faltiples refresh y estados locales (current_box/current_product)",
+            "politica de peso no centralizada"
+        ],
+        "dialogs.py": [
+            "reglas de negocio embebidas en dialogos impiden reutilizacion y pruebas unitarias limpias"
+        ],
+        "admin_panel.py": [
+            "UI acoplada a DB y hardware en el mismo modulo"
+        ],
+        "db_manager.py": [
+            "normalizacion de negocio (SINIIGA) mezclada con persistencia",
+            "SCHEMA_FILE apunta a schema.sql en raiz, pero el esquema versionado visible esta en tools/schema.sql"
+        ],
+        "hardware.py": [
+            "decision de negocio de peso final en modulo de infraestructura"
+        ]
+    },
+    "mejoras_sugeridas": [
+        {
+            "mejora": "Extraer flujo de produccion de pieza a un servicio de aplicacion",
+            "por_que": "Reduce logica de negocio en UI y centraliza orquestacion",
+            "como": "Crear application/pieza_service.py con un metodo registrar_y_etiquetar(...) que encapsule validacion producto + politica de peso + persistencia + impresion"
+        },
+        {
+            "mejora": "Formalizar politica de peso en dominio",
+            "por_que": "Evita divergencias entre main_ui y hardware",
+            "como": "Crear domain/peso_policy.py con funciones puras: calcular_peso_final, validar_rango_cierre, resolver_peso_master"
+        },
+        {
+            "mejora": "Unificar regla SINIIGA",
+            "por_que": "Actualmente hay criterios distintos entre dialog y DB",
+            "como": "Crear domain/siniiga_rules.py y consumirlo desde dialogs + servicios"
+        },
+        {
+            "mejora": "Sacar numeracion inteligente de caja de dialogs",
+            "por_que": "Es regla de negocio, no regla de presentacion",
+            "como": "Crear domain/caja_numeracion.py con evaluate_numero_caja(open_nums, sugerida, entrada)"
+        },
+        {
+            "mejora": "Introducir puertos de infraestructura",
+            "por_que": "Desacopla UI de detalles DB/hardware",
+            "como": "Definir interfaces de repositorio e impresion y usarlas desde Application"
+        }
+    ],
+    "checklist_dominio": {
+        "caja_estado_abierta_cerrada_reabrir": "TOTALMENTE formalizada",
+        "cierre_caja_con_master": "PARCIALMENTE formalizada",
+        "numeracion_caja": "PARCIALMENTE formalizada (en UI)",
+        "normalizacion_siniiga": "PARCIALMENTE formalizada (dispersa)",
+        "validacion_producto": "PARCIALMENTE formalizada",
+        "limites_peso_globales": "AUSENTE en dominio",
+        "reglas_canal_vida_util": "PARCIALMENTE formalizada",
+        "reglas_catalogo_producto": "AUSENTE en dominio"
+    },
+    "recomendaciones_prioritarias": [
+        "Centralizar politica de peso en dominio para eliminar inconsistencias inmediatas",
+        "Extraer caso de uso registrar/imprimir pieza a Application Service",
+        "Unificar normalizacion SINIIGA en una sola regla reutilizable",
+        "Mover numeracion de caja a dominio para testearla fuera de UI",
+        "Crear puertos DB/hardware para reducir acoplamiento y deuda"
+    ],
+    "fuentes_base": [
+        "ARCHITECTURE.md",
+        "RULES.md",
+        "DEBT.md",
+        "main_ui.py",
+        "dialogs.py",
+        "admin_panel.py",
+        "box_domain.py",
+        "box_service.py",
+        "db_manager.py",
+        "hardware.py",
+        "styles.py",
+        "tools/schema.sql"
+    ]
   "generado_por": "codex",
   "objetivo": "auditoria de coherencia por capas y reglas de negocio",
   "nota": "Resumen basado en estado actual del repositorio"
